@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 
 CREATE TABLE IF NOT EXISTS sources (
-    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    id TEXT NOT NULL,
     url TEXT NOT NULL,
     title TEXT NOT NULL,
     domain_type TEXT NOT NULL,
@@ -37,22 +38,24 @@ CREATE TABLE IF NOT EXISTS sources (
     quality_score REAL NOT NULL,
     injection_detected INTEGER NOT NULL,
     retrieved_at TEXT NOT NULL,
-    text TEXT NOT NULL DEFAULT ''
+    text TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (run_id, id)
 );
-CREATE INDEX IF NOT EXISTS idx_sources_url ON sources(url);
+CREATE INDEX IF NOT EXISTS idx_sources_url ON sources(run_id, url);
 
 CREATE TABLE IF NOT EXISTS evidence (
-    id TEXT PRIMARY KEY,
+    id TEXT NOT NULL,
     run_id TEXT NOT NULL,
     subquestion_id TEXT NOT NULL,
     claim TEXT NOT NULL,
     quote TEXT NOT NULL,
-    source_id TEXT NOT NULL REFERENCES sources(id),
+    source_id TEXT NOT NULL,
     verified INTEGER NOT NULL,
     support TEXT NOT NULL DEFAULT 'unchecked',
     content_hash TEXT NOT NULL,
     retrieved_at TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'active',
+    PRIMARY KEY (run_id, id),
     UNIQUE(run_id, content_hash)
 );
 CREATE INDEX IF NOT EXISTS idx_evidence_run ON evidence(run_id);
@@ -137,35 +140,47 @@ class Store:
         return rows[0] if rows else None
 
     # ---- sources ----
-    def add_source(self, source: Source, text: str = "") -> None:
+    def add_source(self, run_id: str, source: Source, text: str = "") -> None:
         self._exec(
-            "INSERT OR REPLACE INTO sources VALUES (?,?,?,?,?,?,?,?,?,?)",
+            "INSERT OR REPLACE INTO sources VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
-                source.id, str(source.url), source.title, source.domain_type,
+                run_id, source.id, str(source.url), source.title, source.domain_type,
                 source.published.isoformat() if source.published else None,
                 source.origin, source.quality_score, int(source.injection_detected),
                 source.retrieved_at.isoformat(), text,
             ),
         )
 
-    def get_source(self, source_id: str) -> Source | None:
-        rows = self._query("SELECT * FROM sources WHERE id=?", (source_id,))
-        if not rows:
-            return None
-        r = rows[0]
+    def get_source(self, run_id: str, source_id: str) -> Source | None:
+        rows = self._query("SELECT * FROM sources WHERE run_id=? AND id=?", (run_id, source_id))
+        return self._row_to_source(rows[0]) if rows else None
+
+    def find_source_by_url(self, run_id: str, url: str) -> Source | None:
+        rows = self._query("SELECT * FROM sources WHERE run_id=? AND url=?", (run_id, url))
+        return self._row_to_source(rows[0]) if rows else None
+
+    def list_sources(self, run_id: str) -> list[Source]:
+        rows = self._query("SELECT * FROM sources WHERE run_id=? ORDER BY rowid", (run_id,))
+        return [self._row_to_source(r) for r in rows]
+
+    def update_source_quality(self, run_id: str, source_id: str, score: float) -> None:
+        self._exec("UPDATE sources SET quality_score=? WHERE run_id=? AND id=?", (score, run_id, source_id))
+
+    @staticmethod
+    def _row_to_source(r: sqlite3.Row) -> Source:
         return Source(
             id=r["id"], url=r["url"], title=r["title"], domain_type=r["domain_type"],
             published=r["published"], origin=r["origin"], quality_score=r["quality_score"],
             injection_detected=bool(r["injection_detected"]), retrieved_at=r["retrieved_at"],
         )
 
-    def get_source_text(self, source_id: str) -> str | None:
-        rows = self._query("SELECT text FROM sources WHERE id=?", (source_id,))
+    def get_source_text(self, run_id: str, source_id: str) -> str | None:
+        rows = self._query("SELECT text FROM sources WHERE run_id=? AND id=?", (run_id, source_id))
         return rows[0]["text"] if rows else None
 
     # ---- evidence ----
     def add_evidence(self, ev: Evidence) -> None:
-        if self.get_source(ev.source_id) is None:
+        if self.get_source(ev.run_id, ev.source_id) is None:
             raise UnknownSourceError(f"source {ev.source_id!r} does not exist")
         try:
             self._exec(
@@ -179,13 +194,13 @@ class Store:
         except sqlite3.IntegrityError as exc:
             raise DuplicateEvidenceError(f"duplicate evidence {ev.content_hash}") from exc
 
-    def set_support(self, evidence_id: str, support: str) -> None:
+    def set_support(self, run_id: str, evidence_id: str, support: str) -> None:
         if support not in ("unchecked", "supported", "partial", "not_supported"):
             raise ValueError(f"invalid support level {support!r}")
-        self._exec("UPDATE evidence SET support=? WHERE id=?", (support, evidence_id))
+        self._exec("UPDATE evidence SET support=? WHERE run_id=? AND id=?", (support, run_id, evidence_id))
 
-    def get_evidence(self, evidence_id: str) -> Evidence | None:
-        rows = self._query("SELECT * FROM evidence WHERE id=?", (evidence_id,))
+    def get_evidence(self, run_id: str, evidence_id: str) -> Evidence | None:
+        rows = self._query("SELECT * FROM evidence WHERE run_id=? AND id=?", (run_id, evidence_id))
         return self._row_to_evidence(rows[0]) if rows else None
 
     def list_evidence(self, run_id: str) -> list[Evidence]:

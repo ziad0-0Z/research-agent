@@ -131,9 +131,9 @@ def load_settings() -> Settings:
     return Settings(
         llm_provider=_choice("LLM_PROVIDER", "gemini", ("gemini", "groq")),  # type: ignore[arg-type]
         gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip(),
-        gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip(),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip(),
         groq_api_key=os.getenv("GROQ_API_KEY", "").strip(),
-        groq_model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip(),
+        groq_model=os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b").strip(),
         llm_requests_per_minute=_int("LLM_REQUESTS_PER_MINUTE", 10),
         llm_max_concurrent=_int("LLM_MAX_CONCURRENT", 3),
         llm_max_retries=_int("LLM_MAX_RETRIES", 4, minimum=0),

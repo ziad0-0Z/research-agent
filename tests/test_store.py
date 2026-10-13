@@ -8,7 +8,7 @@ from research_agent.store import DuplicateEvidenceError, Store, UnknownSourceErr
 def store():
     s = Store(":memory:")
     s.create_run("run_1", "Cloud APIs or self-hosting?")
-    s.add_source(Source(id="src1", url="https://example.com/a", title="A", origin="offline"),
+    s.add_source("run_1", Source(id="src1", url="https://example.com/a", title="A", origin="offline"),
                  text="Self-hosting requires a GPU with at least 24 GB of VRAM.")
     yield s
     s.close()
@@ -22,7 +22,7 @@ def _ev(i, quote="Self-hosting requires a GPU with at least 24 GB of VRAM.", sou
 
 def test_evidence_roundtrip(store):
     store.add_evidence(_ev(1))
-    got = store.get_evidence("ev1")
+    got = store.get_evidence("run_1", "ev1")
     assert got and got.verified and got.source_id == "src1"
     assert [e.id for e in store.list_evidence("run_1")] == ["ev1"]
 
@@ -30,12 +30,12 @@ def test_evidence_roundtrip(store):
 def test_quote_verified_and_claim_support_are_separate(store):
     # A real quote (verified=True) can still fail to support the claim.
     store.add_evidence(_ev(1))
-    assert store.get_evidence("ev1").support == "unchecked"
-    store.set_support("ev1", "not_supported")
-    ev = store.get_evidence("ev1")
+    assert store.get_evidence("run_1", "ev1").support == "unchecked"
+    store.set_support("run_1", "ev1", "not_supported")
+    ev = store.get_evidence("run_1", "ev1")
     assert ev.verified is True and ev.support == "not_supported"
     with pytest.raises(ValueError):
-        store.set_support("ev1", "maybe")
+        store.set_support("run_1", "ev1", "maybe")
 
 
 def test_unknown_source_rejected(store):
@@ -50,7 +50,7 @@ def test_duplicate_quote_rejected(store):
 
 
 def test_source_text_kept_for_quote_verification(store):
-    assert "24 GB" in store.get_source_text("src1")
+    assert "24 GB" in store.get_source_text("run_1", "src1")
 
 
 def test_run_state_update(store):
@@ -66,3 +66,19 @@ def test_review_queue(store):
     review.status = "approved"
     store.upsert_review(review)
     assert store.pending_reviews() == []
+
+
+def test_ids_are_scoped_per_run(store):
+    # Two runs can both have "src1"/"ev1" without overwriting each other.
+    store.create_run("run_2", "Another question?")
+    store.add_source("run_2", Source(id="src1", url="https://example.com/b", title="B", origin="offline"),
+                     text="A different page about vector databases and their scaling limits.")
+    store.add_evidence(_ev(1))
+    other = Evidence.build(evidence_id="ev1", run_id="run_2", subquestion_id="sq1",
+                           claim="Vector databases scale further.", quote="vector databases and their scaling limits",
+                           source_id="src1", verified=True)
+    store.add_evidence(other)
+    assert store.get_source("run_1", "src1").title == "A"
+    assert store.get_source("run_2", "src1").title == "B"
+    assert store.get_evidence("run_2", "ev1").claim == "Vector databases scale further."
+    assert store.find_source_by_url("run_2", "https://example.com/b").id == "src1"

@@ -9,7 +9,7 @@ Agentic AI Final Project — Project 3.
 | [`docs/REQUIREMENTS_MATRIX.md`](docs/REQUIREMENTS_MATRIX.md) | Every brief requirement → code → test → demo scenario |
 | [`eval/METRICS.md`](eval/METRICS.md) | Metric definitions and test sets |
 
-> Status: **Phase 0 (foundations)** — config, LLM layer, data models, SQLite store, tracing, smoke test.
+> Status: **Phase 1 (corpus + tools)** — Phase 0 foundations plus an offline corpus, URL/injection safety and all 11 domain tools.
 
 ## Setup (Windows, cmd)
 
@@ -51,6 +51,13 @@ python scripts\smoke_test.py
 
 The second run makes no API calls and returns identical results. Use replay for tests and as the demo safety net.
 
+### Phase 1 check (all 11 tools, live LLM, offline corpus)
+
+```bat
+python scripts\phase1_check.py
+python scripts\phase1_check.py --live-search
+```
+
 ## Layout so far
 
 ```
@@ -61,6 +68,11 @@ src/research_agent/
   context.py   AppContext passed to tools (run id, store, tool log, review flags)
   store/db.py  SQLite: runs, sources, evidence, reviews, memory
   tracing.py   SDK tracing → local JSONL (+ optional OpenAI dashboard)
-scripts/smoke_test.py
+  guardrails/  url_safety.py (SSRF/local file blocking), injection.py (detect, sanitize, wrap)
+  tools/       corpus, web (search/validate/scrape), quotes, quality, evidence, analysis, review,
+               registry.py (the 11 function tools)
+  agents/      tool_agents.py (claim extractor, evidence analyst, support judge)
+data/corpus/   15 synthetic test pages (see its README)
+scripts/       smoke_test.py, check_models.py, phase1_check.py
 tests/
 ```
