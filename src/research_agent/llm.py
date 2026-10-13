@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from openai import AsyncOpenAI
+from openai.types.shared import Reasoning
 
 from agents import ModelSettings, OpenAIChatCompletionsModel
 
@@ -175,7 +176,18 @@ def reset_model() -> None:
     _model = None
 
 
-# Deterministic-leaning settings for structured steps (planning, judging).
-PRECISE = ModelSettings(temperature=0.1)
-# Slightly more fluent settings for writing the report.
-WRITING = ModelSettings(temperature=0.4)
+def _reasoning(settings: Settings) -> Reasoning | None:
+    effort = settings.llm_reasoning_effort
+    return None if effort == "off" else Reasoning(effort=effort)  # type: ignore[arg-type]
+
+
+def precise_settings(settings: Settings | None = None) -> ModelSettings:
+    """Deterministic-leaning settings for structured steps (planning, judging)."""
+    settings = settings or load_settings()
+    return ModelSettings(temperature=0.1, reasoning=_reasoning(settings))
+
+
+def writing_settings(settings: Settings | None = None) -> ModelSettings:
+    """Slightly more fluent settings for writing the report."""
+    settings = settings or load_settings()
+    return ModelSettings(temperature=0.4, reasoning=_reasoning(settings))

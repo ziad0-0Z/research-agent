@@ -30,7 +30,7 @@ class ConfigError(RuntimeError):
     """Raised when required configuration is missing or invalid."""
 
 
-def _int(name: str, default: int) -> int:
+def _int(name: str, default: int, minimum: int = 1) -> int:
     raw = os.getenv(name, "").strip()
     if not raw:
         return default
@@ -38,8 +38,8 @@ def _int(name: str, default: int) -> int:
         value = int(raw)
     except ValueError as exc:
         raise ConfigError(f"{name} must be an integer, got {raw!r}") from exc
-    if value <= 0:
-        raise ConfigError(f"{name} must be positive, got {value}")
+    if value < minimum:
+        raise ConfigError(f"{name} must be >= {minimum}, got {value}")
     return value
 
 
@@ -61,6 +61,7 @@ class Settings:
     llm_max_concurrent: int
     llm_max_retries: int
     llm_timeout_seconds: int
+    llm_reasoning_effort: str  # off | none | minimal | low | medium | high
     llm_mode: LLMMode
     search_mode: SearchMode
     tavily_api_key: str
@@ -135,8 +136,11 @@ def load_settings() -> Settings:
         groq_model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip(),
         llm_requests_per_minute=_int("LLM_REQUESTS_PER_MINUTE", 10),
         llm_max_concurrent=_int("LLM_MAX_CONCURRENT", 3),
-        llm_max_retries=_int("LLM_MAX_RETRIES", 4),
+        llm_max_retries=_int("LLM_MAX_RETRIES", 4, minimum=0),
         llm_timeout_seconds=_int("LLM_TIMEOUT_SECONDS", 90),
+        llm_reasoning_effort=_choice(
+            "LLM_REASONING_EFFORT", "low", ("off", "none", "minimal", "low", "medium", "high")
+        ),
         llm_mode=_choice("LLM_MODE", "live", ("live", "record", "replay")),  # type: ignore[arg-type]
         search_mode=_choice("SEARCH_MODE", "tavily", ("tavily", "ddg", "offline")),  # type: ignore[arg-type]
         tavily_api_key=os.getenv("TAVILY_API_KEY", "").strip(),
