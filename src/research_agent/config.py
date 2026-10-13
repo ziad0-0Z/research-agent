@@ -130,7 +130,7 @@ def load_settings() -> Settings:
     return Settings(
         llm_provider=_choice("LLM_PROVIDER", "gemini", ("gemini", "groq")),  # type: ignore[arg-type]
         gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip(),
-        gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip(),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip(),
         groq_api_key=os.getenv("GROQ_API_KEY", "").strip(),
         groq_model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip(),
         llm_requests_per_minute=_int("LLM_REQUESTS_PER_MINUTE", 10),
