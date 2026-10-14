@@ -17,7 +17,7 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
-from ..context import AppContext
+from ..context import CURRENT_SPECIALIST, AppContext
 from ..models import ResearcherOutput, WorkerFindings
 
 
@@ -37,6 +37,7 @@ def _evidence_for(ctx: AppContext, subquestion_ids: list[str]) -> dict[str, list
 
 
 async def _run_one(ctx: AppContext, task: WorkerTask, timeout: float) -> WorkerFindings:
+    CURRENT_SPECIALIST.set(task.specialist)  # this coroutine runs in its own task: the value stays local
     started = time.time()
     output: ResearcherOutput | None = None
     error: str | None = None

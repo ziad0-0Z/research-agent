@@ -65,6 +65,11 @@ def render_markdown(ctx: AppContext) -> str:
     if r.limitations:
         lines += ["", "## Limitations"] + [f"- {x}" for x in r.limitations]
 
+    from ..workflows.reliability import coverage_lines
+    coverage = coverage_lines(ctx.reliability)
+    if coverage:  # Phase 7: a degraded run says so in the report itself
+        lines += ["", "## Research coverage"] + [f"- {x}" for x in coverage]
+
     lines += ["", "## Evidence appendix", "", "| Id | Quote | Source |", "|---|---|---|"]
     for eid in sorted(r.cited_evidence_ids(), key=lambda x: int(x[2:]) if x[2:].isdigit() else 0):
         det = check_citation(ctx, eid)

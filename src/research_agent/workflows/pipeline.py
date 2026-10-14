@@ -43,9 +43,11 @@ from ..tools.review import render_markdown
 from ..tools.web import ToolError
 from .confidence import compute_confidence
 from ..memory import MemoryStore, lower_depth, related_reports, reuse_for_plan
+from ..memory.lookup import MemoryUse
 from .eval_loop import LoopResult, writer_critic_loop
 from .parallel import WorkerTask, run_parallel, timeline
 from .release import Release, release_report
+from .reliability import build_reliability, snapshot
 from .router import AssignmentPlan, RouteDecision, route_question, validate_assignments
 from .session import follow_up_prompt, open_session, previous_turns, record_turn
 
@@ -146,20 +148,23 @@ def _writer_prompt(ctx: AppContext, plan: ResearchPlan, analysis: EvidenceAnalys
 #   "fake_citation"      after the Critic: a finding citing an evidence id that does not exist (scenario 9)
 #   "tampered_quote"     after the Critic: a cited quote altered in the store after verification (scenario 9)
 DemoFault = str
-DEMO_FAULTS = ("unsupported_claim", "fake_citation", "tampered_quote")
+#   "search_outage"      Tavily + DuckDuckGo simulated down (offline corpus answers); the risk specialist
+#                        loses every provider → partial report, labelled in its text (scenario 10, Phase 7)
+DEMO_FAULTS = ("unsupported_claim", "fake_citation", "tampered_quote", "search_outage")
 
 
 async def run_research(question: str, *, settings: Settings | None = None, store: Store | None = None,
                        run_agent: RunAgent | None = None, on_event: EventCallback | None = None,
                        demo_fault: DemoFault | None = None, session_id: str | None = None,
-                       clock: Callable[[], Any] | None = None) -> RunResult:
+                       clock: Callable[[], Any] | None = None, run_id: str | None = None) -> RunResult:
     question = (question or "").strip()
     if demo_fault and demo_fault not in DEMO_FAULTS:
         raise PipelineError("input", f"unknown demo fault {demo_fault!r}")
     settings = settings or load_settings()
     store = store or Store(settings.db_path)
     run_agent = run_agent or default_run_agent
-    ctx = AppContext(settings=settings, store=store, question=question, demo_fault=demo_fault)
+    ctx = AppContext(settings=settings, store=store, question=question, demo_fault=demo_fault,
+                     **({"run_id": run_id} if run_id else {}))  # the UI picks the id so it can follow the run
     if clock is not None:
         ctx.clock = clock
     turns: list[dict] = []
@@ -171,8 +176,10 @@ async def run_research(question: str, *, settings: Settings | None = None, store
     mstore = MemoryStore(store)
 
     try:
+        rel_start = snapshot()
         with trace("Research run", group_id=ctx.run_id,
-                   metadata={"run_id": ctx.run_id, "question": question[:200]}):
+                   metadata={"run_id": ctx.run_id, "question": question[:200]}) as run_trace:
+            ctx.trace_ids.append(run_trace.trace_id)  # links the run to data/traces/<trace_id>.jsonl (Trace page)
             # 0. Input guardrail: regex pre-filter (code) → Guard Agent (LLM) → decision (code)
             with guardrail_span("Input guardrail") as span:
                 check = await check_input(question, lambda prompt: run_agent(_guard(), prompt, ctx, 1),
@@ -181,7 +188,8 @@ async def run_research(question: str, *, settings: Settings | None = None, store
             ctx.input_check = check
             _emit(ctx, on_event, "input_checked", **check.summary())
             if not check.allowed:
-                store.update_run(ctx.run_id, status="blocked", state={"input_check": check.summary()})
+                store.update_run(ctx.run_id, status="blocked",
+                                 state={"input_check": check.summary(), "trace_ids": ctx.trace_ids})
                 raise InputBlockedError(check, ctx.run_id)
             if check.requires_review:
                 ctx.flag_review(check.reason)
@@ -221,7 +229,9 @@ async def run_research(question: str, *, settings: Settings | None = None, store
             # 3b. Long-term memory reuse (code): remembered evidence enters through save_evidence (re-verified);
             #     a worker whose subquestions are all memory-covered still researches, at quick depth.
             with custom_span("Memory reuse (code)"):
-                memory_use = await reuse_for_plan(ctx, mstore, plan)
+                # search_outage demo: no memory reuse, so the outage's effect is not hidden by remembered evidence
+                memory_use = (MemoryUse(enabled=False) if demo_fault == "search_outage"
+                              else await reuse_for_plan(ctx, mstore, plan))
             memory_use.related = related
             covered = memory_use.covered()
             depths = {kind: (lower_depth(decision.depth, "quick") if sqs and all(sq.id in covered for sq in sqs)
@@ -245,7 +255,9 @@ async def run_research(question: str, *, settings: Settings | None = None, store
             with custom_span("Parallel research", data={"workers": [t.specialist for t in tasks]}):
                 workers = await run_parallel(ctx, tasks, timeout=settings.worker_timeout_seconds)
             tl = timeline(workers)
-            _emit(ctx, on_event, "research_done", workers=[w.model_dump() for w in workers], timeline=tl)
+            ctx.reliability = build_reliability(ctx, workers, rel_start)
+            _emit(ctx, on_event, "research_done", workers=[w.model_dump() for w in workers], timeline=tl,
+                  reliability=ctx.reliability)
 
             # 5. Evidence Analyst (chain step 2)
             n_evidence = len(ctx.store.list_evidence(ctx.run_id))
@@ -307,14 +319,15 @@ async def run_research(question: str, *, settings: Settings | None = None, store
                                   "memory_lookup": memory_use.summary(), "worker_depths": depths})
             release = release_report(ctx, workers, confidence, plan=plan,
                                      on_event=lambda stage, data: _emit(ctx, on_event, stage, **data))
+            ctx.reliability = build_reliability(ctx, workers, rel_start)  # + LLM/embedding events up to release
             save_run_state(ctx, plan=plan, analysis=analysis, workers=workers, confidence=confidence,
-                           release=release, extra={"memory_commit": release.memory_commit})
+                           release=release, extra={"memory_commit": release.memory_commit, "timeline": tl})
             await record_turn(ctx.session, run_id=ctx.run_id, question=question, main_question=plan.main_question,
                               status=release.status, report=ctx.final_report)
     except InputBlockedError:
         raise  # already recorded as "blocked"
     except Exception as exc:
-        _mark_failed(store, ctx.run_id, exc)
+        _mark_failed(store, ctx.run_id, exc, ctx.trace_ids)
         raise
 
     return RunResult(
@@ -327,11 +340,13 @@ async def run_research(question: str, *, settings: Settings | None = None, store
     )
 
 
-def _mark_failed(store: Store, run_id: str, exc: Exception) -> None:
+def _mark_failed(store: Store, run_id: str, exc: Exception, trace_ids: list[str] | None = None) -> None:
     """A run that crashed must not stay "running" forever: record where and why it stopped."""
     row = store.get_run(run_id)
     state = json.loads(row["state_json"]) if row and row["state_json"] else {}
     state["error"] = {"stage": getattr(exc, "stage", "unknown"), "message": f"{type(exc).__name__}: {exc}"[:500]}
+    if trace_ids:
+        state["trace_ids"] = list(dict.fromkeys(state.get("trace_ids", []) + trace_ids))
     store.update_run(run_id, status="failed", state=state)
 
 
@@ -351,11 +366,18 @@ def save_run_state(ctx: AppContext, *, plan: ResearchPlan, analysis: EvidenceAna
         "confidence": confidence, "review_reasons": ctx.review_reasons, "updated_at": time.time(),
         "input_check": ctx.input_check.summary() if ctx.input_check else None,
         "demo_fault": ctx.demo_fault, "memory_reuse": ctx.memory_reuse, "session_id": ctx.session_id,
+        "trace_ids": list(dict.fromkeys(state.get("trace_ids", []) + ctx.trace_ids)),
+        "reliability": ctx.reliability, "stage_log": _stage_log_for_state(ctx.stage_log),
     })
     if release is not None:
         state.update({"release_status": release.status, "output_check": release.output_check.summary(),
                       "gate_reasons": release.gate_reasons, "final_markdown": release.final_markdown})
     ctx.store.update_run(ctx.run_id, state=state)
+
+
+def _stage_log_for_state(log: list[dict]) -> list[dict]:
+    """Compact stage timeline for the UI (stage name + time only; full payloads stay in the trace)."""
+    return [{"stage": e["stage"], "at": e["at"]} for e in log][-200:]
 
 
 PLANTED_STATEMENT = ("Self-hosting an open-source model is always cheaper than cloud APIs, "

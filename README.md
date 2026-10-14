@@ -151,6 +151,17 @@ Two kinds of memory:
 **Replay note:** remembered evidence changes later prompts. Record and replay with the same `data/research.db`
 (or `MEMORY_MODE=off`). Runs without memory hits and without a session send exactly the prompts they sent before.
 
+### The app (Phases 7–8)
+
+```cmd
+python app.py
+```
+
+Open http://127.0.0.1:7860. Pages: Overview, New research (with the demo-scenario list), Research history, Evidence
+explorer, Review queue, Memory, Traces, Evaluation, Settings. Runs started here use the same pipeline as the CLI.
+
+Failure recovery demo (scenario 10): `python scripts\run_research.py --fault search_outage`
+
 ## Layout so far
 
 ```

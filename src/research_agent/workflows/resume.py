@@ -106,6 +106,8 @@ def _restore(settings: Settings, store: Store, run_id: str) -> tuple[AppContext,
                                  ic.get("checked_by", "guard_agent"), ic.get("domain"))
     ctx.demo_fault = state.get("demo_fault")
     ctx.memory_reuse = dict(state.get("memory_reuse") or {})
+    ctx.reliability = dict(state.get("reliability") or {})
+    ctx.trace_ids = list(state.get("trace_ids") or [])
     ctx._counters["ev"] = len(store.list_evidence(run_id))
     ctx._counters["src"] = len(store.list_sources(run_id))
     return ctx, state
@@ -139,10 +141,12 @@ async def resume_run(run_id: str, *, settings: Settings | None = None, store: St
     def emit(stage: str, data: dict) -> None:
         _emit(ctx, on_event, stage, **data)
 
-    with trace("Resume run", group_id=run_id, metadata={"run_id": run_id, "decision": decision}):
+    with trace("Resume run", group_id=run_id, metadata={"run_id": run_id, "decision": decision}) as resume_trace:
+        ctx.trace_ids.append(resume_trace.trace_id)
         emit("resumed", {"decision": decision, "note": review.reviewer_note})
         if decision == "rejected":
-            store.update_run(run_id, status="rejected")
+            state["trace_ids"] = ctx.trace_ids
+            store.update_run(run_id, status="rejected", state=state)
             emit("rejected_by_human", {"note": review.reviewer_note})
             await _record_in_conversation(settings, state, run_id, ctx.question, plan, "rejected", None)
             return ResumeResult(run_id, "rejected", decision, None, ctx.final_report, None, state.get("confidence"), ctx)

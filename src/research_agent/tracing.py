@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,10 @@ from agents import add_trace_processor, set_trace_processors, set_tracing_export
 from agents.tracing import Span, Trace, TracingProcessor
 
 from .config import Settings
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 class LocalJsonlProcessor(TracingProcessor):
@@ -31,10 +36,14 @@ class LocalJsonlProcessor(TracingProcessor):
             fh.write(json.dumps(record, default=str) + "\n")
 
     def on_trace_start(self, trace: Trace) -> None:
-        self._write(trace.trace_id, {"event": "trace_start", "name": trace.name, "trace_id": trace.trace_id})
+        exported = trace.export() or {}
+        self._write(trace.trace_id, {"event": "trace_start", "name": trace.name, "trace_id": trace.trace_id,
+                                     "group_id": exported.get("group_id"), "metadata": exported.get("metadata"),
+                                     "started_at": _now_iso()})
 
     def on_trace_end(self, trace: Trace) -> None:
-        self._write(trace.trace_id, {"event": "trace_end", "name": trace.name, "trace_id": trace.trace_id})
+        self._write(trace.trace_id, {"event": "trace_end", "name": trace.name, "trace_id": trace.trace_id,
+                                     "ended_at": _now_iso()})
 
     def on_span_start(self, span: Span[Any]) -> None:
         pass

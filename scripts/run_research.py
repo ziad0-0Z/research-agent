@@ -9,6 +9,7 @@
     python scripts/run_research.py --question attack      # demo 7: input guardrail blocks the request
     python scripts/run_research.py --fault fake_citation  # demo 9: output guardrail rejects a fake citation
     python scripts/run_research.py --fault tampered_quote # demo 9b: output guardrail catches an altered quote
+    python scripts/run_research.py --fault search_outage  # demo 10: search providers down → labelled partial report
     python scripts/run_research.py --follow-up latest --question "Dig deeper into the cost side"
                                                           # session memory: continue the latest conversation
     python scripts/run_research.py --session demo1        # start (or continue) a named conversation
@@ -101,6 +102,11 @@ def on_event(stage: str, data: dict) -> None:
             dur = w["finished_at"] - w["started_at"]
             print(f"           {STATUS_ICON[w['status']]} {w['specialist']:9s} {w['status']:8s} "
                   f"{len(w['evidence_ids'])} evidence  {dur:5.1f}s" + (f"  ({w['error']})" if w["error"] else ""))
+        s = (data.get("reliability") or {}).get("search") or {}
+        if s.get("fallback_calls") or s.get("failed_calls"):
+            print(f"           🔁 Search: {s['fallback_calls']}/{s['calls']} answered by a fallback "
+                  f"({', '.join(f'{k} {v}' for k, v in s['by_provider'].items())}), {s['failed_calls']} failed on "
+                  f"every provider; unavailable: {', '.join(s['unavailable'])} → labelled in the report")
     elif stage == "analysed":
         print(f"{t} 🤖 Evidence Analyst: {data['agreements']} agreements, {data['contradictions']} contradictions, "
               f"gaps: {data['gaps'] or 'none'}")

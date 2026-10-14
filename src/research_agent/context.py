@@ -10,6 +10,7 @@ import hashlib
 import secrets
 import time
 import uuid
+from contextvars import ContextVar
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -18,6 +19,10 @@ from typing import Any
 from .config import Settings
 from .models import EvidenceAnalysis, ResearchReport, utcnow
 from .store import Store
+
+# Which specialist is running the current coroutine (set by workflows/parallel.py; asyncio tasks copy it,
+# so every tool call inside one worker sees its own value). Used for labelled search events and demo faults.
+CURRENT_SPECIALIST: ContextVar[str | None] = ContextVar("current_specialist", default=None)
 
 
 @dataclass
@@ -48,6 +53,9 @@ class AppContext:
     session: Any = None  # agents.SQLiteSession for follow-up questions (session memory), or None
     session_id: str | None = None
     follow_up: bool = False  # the session already has earlier turns: only then does the Planner get it
+    trace_ids: list[str] = field(default_factory=list)  # SDK traces of this run (pipeline + every resume)
+    search_log: list[dict[str, Any]] = field(default_factory=list)  # one entry per search_web call (Phase 7)
+    reliability: dict[str, Any] = field(default_factory=dict)  # what degraded in this run (workers, search, LLM)
     _approval_token: str | None = None
     _approved_hash: str | None = None
     _counters: dict[str, int] = field(default_factory=dict)

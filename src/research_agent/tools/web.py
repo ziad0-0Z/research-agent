@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-from ..context import AppContext
+from ..context import CURRENT_SPECIALIST, AppContext
 from ..guardrails.injection import detect_injection, sanitize, wrap_untrusted
 from ..guardrails.url_safety import check_url
 from ..models import Source
@@ -84,9 +84,16 @@ async def search_web(ctx: AppContext, query: str, max_results: int = 5) -> dict:
     n = max(1, min(int(max_results), MAX_RESULTS))
 
     chain = {"tavily": ["tavily", "ddg", "offline"], "ddg": ["ddg", "offline"], "offline": ["offline"]}
+    providers = chain[ctx.settings.search_mode]
+    specialist = CURRENT_SPECIALIST.get()
+    outage = ctx.demo_fault == "search_outage"
+    if outage:  # demo scenario 10: the whole chain is exercised, live providers never contacted
+        providers = chain["tavily"]
     errors: list[str] = []
-    for provider in chain[ctx.settings.search_mode]:
+    for provider in providers:
         try:
+            if outage and (provider != "offline" or specialist in SEARCH_OUTAGE_TOTAL):
+                raise ToolError(f"simulated outage ({provider} unreachable)")
             if provider == "tavily":
                 results = await _search_tavily(ctx, query, n)
             elif provider == "ddg":
@@ -104,15 +111,32 @@ async def search_web(ctx: AppContext, query: str, max_results: int = 5) -> dict:
                 unique.append(r)
         if unique or provider == "offline":
             ctx.log_tool("search_web", True, f"{provider}: {len(unique)} results for {query!r}")
+            _log_search(ctx, specialist, provider, providers, errors)
             return {
                 "query": query,
                 "provider": provider,
-                "fallback_used": provider != chain[ctx.settings.search_mode][0],
+                "fallback_used": provider != providers[0],
                 "errors": errors,
                 "results": [asdict(r) for r in unique],
             }
     ctx.log_tool("search_web", False, f"all providers failed for {query!r}")
+    _log_search(ctx, specialist, None, providers, errors)
     raise ToolError("all search providers failed: " + "; ".join(errors))
+
+
+# Demo fault "search_outage": Tavily and DuckDuckGo are down for every worker (they fall back to the offline
+# corpus); for these specialists every provider is down, so that worker fails and the report is partial.
+SEARCH_OUTAGE_TOTAL = ("risk",)
+
+
+def _log_search(ctx: AppContext, specialist: str | None, used: str | None, providers: list[str],
+                errors: list[str]) -> None:
+    """Record which provider answered (Phase 7: shown in the report's coverage note and the UI)."""
+    ctx.search_log.append({
+        "specialist": specialist, "provider": used, "first_choice": providers[0],
+        "fallback_used": used != providers[0], "failed": used is None,
+        "unavailable": [e.split(":", 1)[0] for e in errors],
+    })
 
 
 # --------------------------------------------------------------------------- validate_source

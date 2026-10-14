@@ -1,0 +1,457 @@
+{
+  "run_id": "run_d38b8a8dae",
+  "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+  "status": "paused_for_review",
+  "input_check": {
+    "allowed": true,
+    "category": "valid_research",
+    "reason": "This is a valid business and technology decision-making question about infrastructure choices for a startup.",
+    "checked_by": "guard_agent",
+    "domain": "technology",
+    "matched": [],
+    "requires_review": false
+  },
+  "output_check": {
+    "passed": true,
+    "checks_run": [
+      "schema",
+      "structure",
+      "citations",
+      "support",
+      "unconfirmed_actions",
+      "links",
+      "injection"
+    ],
+    "issues": []
+  },
+  "gate_reasons": [
+    "confidence 0.41 is below 0.6"
+  ],
+  "route": {
+    "path": "standard",
+    "requires_review": false,
+    "domains": [],
+    "matched_terms": [],
+    "reason": "no sensitive domain detected"
+  },
+  "plan": {
+    "main_question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "decision_context": "The startup's technical leadership must choose between the operational simplicity of cloud APIs versus the cost and control of self-hosting, given limited engineering headcount.",
+    "subquestions": [
+      {
+        "id": "sq1",
+        "question": "What are the total cost of ownership differences between cloud LLM APIs and self-hosting open-source models at low to medium request volumes?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Clear cost comparison including infrastructure, API token pricing, and maintenance overhead.",
+        "search_queries": [
+          "cloud llm api vs self hosting cost comparison",
+          "running open source llm vs api cost startup"
+        ]
+      },
+      {
+        "id": "sq2",
+        "question": "What engineering effort and infrastructure expertise are required to deploy, monitor, and scale open-source LLMs compared to integrating cloud APIs?",
+        "type": "technical",
+        "priority": 1,
+        "success_criteria": "Detailed breakdown of DevOps requirements, tooling, and team size impact for self-hosting.",
+        "search_queries": [
+          "self hosting open source llm engineering effort",
+          "llm inference server requirements vllm tgi"
+        ]
+      },
+      {
+        "id": "sq3",
+        "question": "What are the data privacy, security, and compliance risks associated with third-party cloud LLM APIs versus self-hosted models?",
+        "type": "risk",
+        "priority": 2,
+        "success_criteria": "Comparison of data retention policies, compliance certifications, and security risks.",
+        "search_queries": [
+          "llm api data privacy enterprise compliance",
+          "self hosted llm data security benefits"
+        ]
+      }
+    ]
+  },
+  "decision": {
+    "assignments": [
+      {
+        "specialist": "market",
+        "subquestion_ids": [
+          "sq1"
+        ]
+      },
+      {
+        "specialist": "technical",
+        "subquestion_ids": [
+          "sq2"
+        ]
+      },
+      {
+        "specialist": "risk",
+        "subquestion_ids": [
+          "sq3"
+        ]
+      }
+    ],
+    "depth": "standard",
+    "rationale": "All three specialists are utilized to thoroughly address the distinct financial, architectural, and compliance dimensions of the startup's hosting decision."
+  },
+  "assignment_corrections": [],
+  "workers": [
+    {
+      "specialist": "market",
+      "status": "success",
+      "subquestion_ids": [
+        "sq1"
+      ],
+      "evidence_ids": [
+        "ev2",
+        "ev3",
+        "ev4",
+        "ev5",
+        "ev6",
+        "ev7",
+        "ev8",
+        "ev9"
+      ],
+      "summaries": {
+        "sq1": "At low to medium request volumes, hosted LLM APIs provide a lower total cost of ownership than self-hosting [ev3]. Rented cloud GPUs for inference cost between $1.50 and $4.00 per hour ($1,100 to $2,900 per month for 24/7 uptime) before storage, networking, and monitoring [ev5]. The direct compute break-even point for self-hosting is estimated between 1 to 3 billion tokens per month [ev6]. When including engineering labor required for setup, maintenance, monitoring, and scaling, the labor cost for self-hosting outweighs compute savings until volume reaches several billion tokens per month [ev2]."
+      },
+      "error": null,
+      "started_at": 1792004216.944198,
+      "finished_at": 1792004278.9600728
+    },
+    {
+      "specialist": "technical",
+      "status": "success",
+      "subquestion_ids": [
+        "sq2"
+      ],
+      "evidence_ids": [
+        "ev1"
+      ],
+      "summaries": {
+        "sq2": "Keeping a self-hosted open-weight model reliable in production requires between 0.25 and 0.5 of a full-time engineer on an ongoing basis according to TCO models for small engineering teams [ev1]. Open issues: Only one source provided specific engineering allocation figures; details on exact DevOps toolchains or infrastructure scaling metrics for small startups remain limited in the retrieved evidence."
+      },
+      "error": null,
+      "started_at": 1792004216.944198,
+      "finished_at": 1792004278.2244103
+    },
+    {
+      "specialist": "risk",
+      "status": "failed",
+      "subquestion_ids": [
+        "sq3"
+      ],
+      "evidence_ids": [],
+      "summaries": {
+        "sq3": "No web search results were accessible due to search provider outages, so no specific data privacy, security, or compliance evidence could be retrieved or saved. Open issues: All search queries failed due to tool/provider outages, leaving the comparison between third-party cloud LLM APIs and self-hosted models unsupported by saved evidence."
+      },
+      "error": "no evidence saved",
+      "started_at": 1792004216.944198,
+      "finished_at": 1792004220.153074
+    }
+  ],
+  "timeline": {
+    "wall_seconds": 62.0,
+    "sequential_seconds": 126.5,
+    "speedup": 2.04,
+    "bars": [
+      {
+        "specialist": "market",
+        "start": 0.0,
+        "end": 62.0,
+        "status": "success"
+      },
+      {
+        "specialist": "technical",
+        "start": 0.0,
+        "end": 61.3,
+        "status": "success"
+      },
+      {
+        "specialist": "risk",
+        "start": 0.0,
+        "end": 3.2,
+        "status": "failed"
+      }
+    ]
+  },
+  "analysis": {
+    "agreements": [
+      "Self-hosting open-weight models requires ongoing engineering maintenance for monitoring, scaling, and upgrades [ev1, ev9].",
+      "The break-even point where self-hosting becomes more cost-effective than hosted APIs is around several billion tokens per month [ev2, ev3, ev6, ev8]."
+    ],
+    "contradictions": [],
+    "gaps": []
+  },
+  "report": {
+    "title": "Cloud LLM APIs vs Self-Hosting Open-Source Models for a 5-Person Startup",
+    "executive_summary": "A 5-person startup should use cloud LLM APIs rather than self-hosting unless its token volume exceeds several billion per month. Below this threshold, hosted APIs provide a lower total cost of ownership because the engineering labor required to maintain self-hosted models outweighs potential compute savings. This decision depends heavily on monthly token volume and the opportunity cost of engineering headcount.",
+    "findings": [
+      {
+        "statement": "Keeping a self-hosted open-weight model reliable in production requires 0.25 to 0.5 of a full-time engineer for ongoing maintenance, patching, and monitoring.",
+        "evidence_ids": [
+          "ev1"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "At typical startup engineering costs, the labor required for self-hosting outweighs compute savings until volume reaches several billion tokens per month.",
+        "evidence_ids": [
+          "ev2",
+          "ev3"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "On-demand rentals for a single inference-class GPU range from $1.50 to $4.00 per hour, translating to roughly $1,100 to $2,900 per month around the clock.",
+        "evidence_ids": [
+          "ev4",
+          "ev5"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "The break-even point for self-hosting falls between 1 and 3 billion tokens per month, below which GPUs sit idle and effective costs exceed API pricing.",
+        "evidence_ids": [
+          "ev6",
+          "ev7"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Initial setup for serving, autoscaling, and monitoring takes about three weeks of engineering time before ongoing maintenance begins.",
+        "evidence_ids": [
+          "ev9"
+        ],
+        "strength": "moderate"
+      }
+    ],
+    "contradictions": [],
+    "limitations": [
+      "The risk analysis subquestion failed to gather evidence, leaving data privacy, security, and compliance risks unaddressed.",
+      "Evidence sources do not cover specialized hardware optimizations or multi-region high availability costs."
+    ],
+    "recommendation": "Use cloud LLM APIs for all product features until monthly token volume consistently exceeds 1 to 3 billion tokens; revisit self-hosting only when growth justifies dedicating 0.25 to 0.5 of an engineer to infrastructure maintenance.",
+    "impact": "medium"
+  },
+  "invalid_citations": [],
+  "confidence": {
+    "score": 0.41,
+    "coverage": 0.67,
+    "covered_subquestions": "2/3",
+    "source_quality": 0.73,
+    "contradiction_penalty": 0.0,
+    "worker_factor": 0.85,
+    "explanation": "2/3 subquestions covered by usable cited evidence; mean source quality 0.73; 0 contradiction(s); 1 failed/timed-out worker(s)."
+  },
+  "critic": {
+    "verdict": "PASS",
+    "stop_reason": "passed",
+    "best_round": 1,
+    "rounds": [
+      {
+        "round": 1,
+        "verdict": "PASS",
+        "blocking": 0,
+        "advisory": 0,
+        "issues": [],
+        "autofixes": [],
+        "support": {
+          "1": "supported",
+          "2": "supported",
+          "3": "supported",
+          "4": "supported",
+          "5": "supported"
+        },
+        "retrieval": "hybrid",
+        "judged": 5,
+        "reused": 0,
+        "seconds": 15.99,
+        "revision_instructions": []
+      }
+    ]
+  },
+  "tool_calls": [
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'cloud llm api vs self hosting cost comparison'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'self hosting open source llm engineering effort'"
+    },
+    {
+      "tool": "search_web",
+      "ok": false,
+      "summary": "all providers failed for 'llm api data privacy enterprise compliance'"
+    },
+    {
+      "tool": "search_web",
+      "ok": false,
+      "summary": "all providers failed for 'self hosted llm data security benefits'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src1 https://applied-systems-institute.example/reports/llm-tco-small-teams quality=0.9 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src2 https://inference-notes.example/posts/gpu-rental-break-even quality=0.55 injection=False"
+    },
+    {
+      "tool": "search_web",
+      "ok": false,
+      "summary": "all providers failed for 'cloud llm api vs self hosted security compliance privacy'"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 2 claims, 2 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev1 from src1 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev2 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev3 from src1 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 6 claims, 6 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev4 from src2 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev5 from src2 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev6 from src2 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev7 from src2 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev8 from src2 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev9 from src2 (sq1)"
+    },
+    {
+      "tool": "compare_sources",
+      "ok": true,
+      "summary": "9 items: 2 agreements, 0 contradictions, 0 dropped (unknown ids)"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Keeping a self-hosted open-weight model reliable in production requires 0.25 to '"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'At typical startup engineering costs, the labor required for self-hosting outwei'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'On-demand rentals for a single inference-class GPU range from $1.50 to $4.00 per'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'The break-even point for self-hosting falls between 1 and 3 billion tokens per m'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Initial setup for serving, autoscaling, and monitoring takes about three weeks o'"
+    },
+    {
+      "tool": "request_human_approval",
+      "ok": true,
+      "summary": "pending: confidence 0.41 is below 0.6"
+    }
+  ],
+  "memory": {
+    "lookup": {
+      "enabled": false,
+      "related_reports": [
+        {
+          "run_id": "run_1e2e915dc3",
+          "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+          "title": "Cloud LLM APIs Versus Self-Hosting for a 5-Person Startup",
+          "similarity": 1.0,
+          "confidence": 0.73,
+          "released_at": "2026-10-14T12:44:02.037017+00:00",
+          "review_status": "released"
+        },
+        {
+          "run_id": "run_99f0e7d088",
+          "question": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?",
+          "title": "Cost Evaluation: Self-Hosting Open-Source LLMs Versus Cloud APIs for Startups",
+          "similarity": 0.727,
+          "confidence": 0.73,
+          "released_at": "2026-10-14T15:42:18.727784+00:00",
+          "review_status": "approved"
+        }
+      ],
+      "candidates": 0,
+      "reused": 0,
+      "reverified": 0,
+      "unverifiable": [],
+      "skipped_reverify_budget": 0,
+      "rejected": [],
+      "coverage": {},
+      "covered_subquestions": [],
+      "retrieval": "none",
+      "assignment": "none",
+      "items": []
+    },
+    "commit": null
+  },
+  "session_id": "s_2192da2b65"
+}
