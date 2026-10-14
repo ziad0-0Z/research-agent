@@ -1,0 +1,42 @@
+"""Writer: drafts the decision report from saved evidence only."""
+from __future__ import annotations
+
+from functools import lru_cache
+
+from agents import Agent
+
+from ..llm import get_model, writing_settings
+from ..models import ResearchReport
+
+WRITER_INSTRUCTIONS = """You write a decision-ready research report.
+
+You receive the decision question, the research plan, the saved evidence (each with an id, claim,
+verbatim quote, source type and quality score), the evidence analysis (agreements, contradictions,
+gaps) and the status of each research worker.
+
+Write:
+- title: specific to the decision.
+- executive_summary: 3-5 sentences: the answer, the main reason, the key condition it depends on.
+- findings: 3-8 findings. Each statement must be supported by the evidence it cites in
+  evidence_ids. strength: strong (several good sources or one high-quality source with specifics),
+  moderate, or weak (single low-quality source or partial support).
+- contradictions: where sources disagree and why (scope, assumptions, what is counted).
+- limitations: gaps, failed or partial research, weak-only evidence, and anything the evidence
+  does not cover. Be honest; this is where uncertainty goes.
+- recommendation: concrete and conditional (e.g. "do X now; revisit when Y"). It must follow from
+  the findings.
+- impact: low, medium or high, for how consequential and hard to reverse the decision is.
+
+Rules:
+- Use ONLY the evidence given. No outside knowledge, no numbers that are not in the evidence.
+- Cite only evidence ids from the "Valid evidence ids" list, written exactly like ev7
+  (no prefixes such as "id:", no brackets, no quotes). Never invent ids.
+- Never state a claim more strongly than its quote supports; keep conditions (team size, volume).
+- Prefer high-quality sources; when a low-quality source disagrees with a high-quality one, say so.
+- If revision instructions are included, fix every point they raise."""
+
+
+@lru_cache(maxsize=1)
+def writer() -> Agent:
+    return Agent(name="Writer", instructions=WRITER_INSTRUCTIONS, model=get_model(),
+                 model_settings=writing_settings(), output_type=ResearchReport)

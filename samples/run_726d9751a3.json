@@ -1,0 +1,426 @@
+{
+  "run_id": "run_726d9751a3",
+  "question": "Should our bank process customer financial data with a self-hosted LLM?",
+  "route": {
+    "path": "sensitive",
+    "requires_review": true,
+    "domains": [
+      "financial"
+    ],
+    "matched_terms": [
+      "bank",
+      "customer financial"
+    ],
+    "reason": "sensitive domain (financial): human review required before finalising"
+  },
+  "plan": {
+    "main_question": "Should our bank process customer financial data with a self-hosted LLM?",
+    "decision_context": "Bank technology leadership is deciding whether to deploy a self-hosted large language model for internal customer data processing, balancing security, regulatory compliance, and infrastructure costs.",
+    "subquestions": [
+      {
+        "id": "sq1",
+        "question": "What are the regulatory and compliance requirements for a bank hosting an LLM on-premises or in a private cloud with customer financial data?",
+        "type": "risk",
+        "priority": 1,
+        "success_criteria": "Clear identification of compliance frameworks like GDPR, GLBA, and SOC 2 requirements for self-hosted financial AI systems.",
+        "search_queries": [
+          "banking regulations self hosted LLM compliance",
+          "fintech private cloud LLM data privacy rules"
+        ]
+      },
+      {
+        "id": "sq2",
+        "question": "What infrastructure and hardware costs are required to train or run inference on a self-hosted LLM at banking scale?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Hardware cost estimates including GPU servers, electricity, and maintenance for self-hosted enterprise LLMs.",
+        "search_queries": [
+          "cost of self hosting enterprise LLM hardware",
+          "GPU server cost for private LLM deployment"
+        ]
+      },
+      {
+        "id": "sq3",
+        "question": "What is the engineering effort and technical architecture required to securely deploy and maintain a self-hosted LLM in a financial institution?",
+        "type": "technical",
+        "priority": 2,
+        "success_criteria": "Description of required DevOps, security hardening, model fine-tuning pipeline, and latency benchmarks.",
+        "search_queries": [
+          "architectural patterns for self hosted LLM banking",
+          "enterprise security requirements for local LLM"
+        ]
+      }
+    ]
+  },
+  "decision": {
+    "assignments": [
+      {
+        "specialist": "risk",
+        "subquestion_ids": [
+          "sq1"
+        ]
+      },
+      {
+        "specialist": "market",
+        "subquestion_ids": [
+          "sq2"
+        ]
+      },
+      {
+        "specialist": "technical",
+        "subquestion_ids": [
+          "sq3"
+        ]
+      }
+    ],
+    "depth": "standard",
+    "rationale": "All three specialists are deployed to cover compliance, financial, and architectural aspects of the self-hosted banking LLM. Standard depth is chosen to ensure a thorough evaluation of these high-stakes factors."
+  },
+  "assignment_corrections": [],
+  "workers": [
+    {
+      "specialist": "risk",
+      "status": "success",
+      "subquestion_ids": [
+        "sq1"
+      ],
+      "evidence_ids": [
+        "ev10",
+        "ev11",
+        "ev12"
+      ],
+      "summaries": {
+        "sq1": "Regulated financial institutions that process customer financial data using AI models remain fully responsible for that data regardless of whether the model runs on their own infrastructure or via a third party [ev10]. Self-hosting does not remove compliance obligations; institutions must still demonstrate proper access controls, audit logging, model change management, and incident response [ev11], and deployments require prior approval from risk and compliance functions [ev12]. Open issues: Specific references to GDPR, GLBA, or SOC 2 frameworks were not explicitly named in the official guidance snippet retrieved, though general regulatory responsibilities for self-hosted AI systems are clearly established."
+      },
+      "error": null,
+      "started_at": 1791948755.0469434,
+      "finished_at": 1791948818.5225713
+    },
+    {
+      "specialist": "market",
+      "status": "success",
+      "subquestion_ids": [
+        "sq2"
+      ],
+      "evidence_ids": [
+        "ev6",
+        "ev7",
+        "ev8",
+        "ev9"
+      ],
+      "summaries": {
+        "sq2": "On-demand rental for a single inference-class GPU ranges from $1.50 to $4.00 per hour across providers, amounting to roughly $1,100 to $2,900 per month per GPU around the clock before storage, networking, and monitoring costs [ev6, ev7]. A single high-memory GPU can serve a 7-14B parameter model, whereas 70B-class models require two to four GPUs [ev8]. Open issues: Specific banking-scale training costs and on-premise hardware capital expenditures (server purchase prices, electricity, and dedicated facility maintenance) were not detailed in the sources."
+      },
+      "error": null,
+      "started_at": 1791948755.0469434,
+      "finished_at": 1791948817.839076
+    },
+    {
+      "specialist": "technical",
+      "status": "success",
+      "subquestion_ids": [
+        "sq3"
+      ],
+      "evidence_ids": [
+        "ev1",
+        "ev2",
+        "ev3",
+        "ev4",
+        "ev5"
+      ],
+      "summaries": {
+        "sq3": "Deploying a self-hosted LLM requires verifying model weights against checksums, securing the model supply chain [ev1], patching inference servers [ev2], authenticating inference endpoints [ev3], restricting query and configuration access while maintaining audit logs for sensitive prompts [ev4], and handling prompt injection vulnerabilities by treating all inputs and retrieved documents as untrusted [ev5]. Open issues: Specific latency benchmarks, detailed MLOps fine-tuning pipelines, and exact sizing guidelines were not fully covered by the retrieved security guidance."
+      },
+      "error": null,
+      "started_at": 1791948755.0469434,
+      "finished_at": 1791948817.7313244
+    }
+  ],
+  "timeline": {
+    "wall_seconds": 63.5,
+    "sequential_seconds": 188.9,
+    "speedup": 2.98,
+    "bars": [
+      {
+        "specialist": "risk",
+        "start": 0.0,
+        "end": 63.5,
+        "status": "success"
+      },
+      {
+        "specialist": "market",
+        "start": 0.0,
+        "end": 62.8,
+        "status": "success"
+      },
+      {
+        "specialist": "technical",
+        "start": 0.0,
+        "end": 62.7,
+        "status": "success"
+      }
+    ]
+  },
+  "analysis": {
+    "agreements": [
+      "Organizations self-hosting language models must verify downloaded weights, patch inference servers, restrict access, and maintain audit logs [ev1, ev2, ev3, ev4].",
+      "Self-hosting models does not eliminate compliance, regulatory responsibilities, or security risks like prompt injection [ev5, ev10, ev11]."
+    ],
+    "contradictions": [],
+    "gaps": []
+  },
+  "report": {
+    "title": "Research Report: Processing Customer Financial Data with a Self-Hosted LLM",
+    "executive_summary": "Deploying a self-hosted LLM for customer financial data is feasible but requires strict adherence to regulatory oversight and security controls. While self-hosting offers infrastructure control, the bank remains fully responsible for data compliance, security, and risk management. Technology leadership should proceed with a pilot conditional on prior approval from compliance and risk functions, alongside implementation of robust infrastructure patching, access controls, and audit logging.",
+    "findings": [
+      {
+        "statement": "Regulated financial institutions remain fully responsible for customer financial data processed by AI models, regardless of whether the infrastructure is in-house or third-party.",
+        "evidence_ids": [
+          "id:ev10"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Self-hosting does not remove compliance obligations; institutions must demonstrate access controls, audit logging, model change management, and incident response.",
+        "evidence_ids": [
+          "id:ev11"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Moving customer financial data processing to a new AI deployment model requires prior approval from the institution's compliance and risk functions.",
+        "evidence_ids": [
+          "id:ev12"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Self-hosted LLM architectures require verifying downloaded model weights against checksums, regular server patching, authenticated inference endpoints, and audit logs.",
+        "evidence_ids": [
+          "id:ev1",
+          "id:ev2",
+          "id:ev3",
+          "id:ev4"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Self-hosting does not protect against prompt injection, requiring applications to treat user input and retrieved documents as untrusted.",
+        "evidence_ids": [
+          "id:ev1",
+          "id:ev5"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "On-demand rental for a single inference-class GPU ranges from $1.50 to $4.00 per hour, totaling roughly $1,100 to $2,900 per month per GPU before storage, networking, and monitoring.",
+        "evidence_ids": [
+          "id:ev6",
+          "id:ev7"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Serving 7-14B parameter models comfortably requires a single high-memory GPU, while 70B-class models require two to four GPUs.",
+        "evidence_ids": [
+          "id:ev8"
+        ],
+        "strength": "moderate"
+      }
+    ],
+    "contradictions": [],
+    "limitations": [
+      "Market cost data relies on general cloud provider estimates rather than enterprise-specific banking grid infrastructure costs.",
+      "Specific details on internal bank latency requirements and fine-tuning pipeline data throughput are not covered by the evidence."
+    ],
+    "recommendation": "Do not deploy production workloads immediately; instead, secure formal approval from compliance and risk functions first. Revisit full deployment when infrastructure security hardening, prompt injection mitigations, and cost-per-token models are fully validated.",
+    "impact": "high"
+  },
+  "invalid_citations": [
+    {
+      "evidence_id": "id:ev1",
+      "reason": "evidence id does not exist in this run"
+    },
+    {
+      "evidence_id": "id:ev10",
+      "reason": "evidence id does not exist in this run"
+    },
+    {
+      "evidence_id": "id:ev11",
+      "reason": "evidence id does not exist in this run"
+    },
+    {
+      "evidence_id": "id:ev12",
+      "reason": "evidence id does not exist in this run"
+    },
+    {
+      "evidence_id": "id:ev2",
+      "reason": "evidence id does not exist in this run"
+    },
+    {
+      "evidence_id": "id:ev3",
+      "reason": "evidence id does not exist in this run"
+    },
+    {
+      "evidence_id": "id:ev4",
+      "reason": "evidence id does not exist in this run"
+    },
+    {
+      "evidence_id": "id:ev5",
+      "reason": "evidence id does not exist in this run"
+    },
+    {
+      "evidence_id": "id:ev6",
+      "reason": "evidence id does not exist in this run"
+    },
+    {
+      "evidence_id": "id:ev7",
+      "reason": "evidence id does not exist in this run"
+    },
+    {
+      "evidence_id": "id:ev8",
+      "reason": "evidence id does not exist in this run"
+    }
+  ],
+  "confidence": {
+    "score": 0.0,
+    "coverage": 0.0,
+    "covered_subquestions": "0/3",
+    "source_quality": 0.0,
+    "contradiction_penalty": 0.0,
+    "worker_factor": 1.0,
+    "explanation": "0/3 subquestions covered by usable cited evidence; mean source quality 0.00; 0 contradiction(s); 0 failed/timed-out worker(s)."
+  },
+  "tool_calls": [
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'banking regulations self hosted LLM compliance'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'architectural patterns for self hosted LLM banking'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'cost of self hosting enterprise LLM hardware'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'fintech private cloud LLM data privacy rules'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'enterprise security requirements for local LLM'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'GPU server cost for private LLM deployment'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'GDPR GLBA SOC2 banking AI compliance self hosted'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src1 https://cyber-readiness-centre.example/guidance/self-hosted-llm-security quality=0.95 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src2 https://inference-notes.example/posts/gpu-rental-break-even quality=0.55 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src3 https://financial-conduct-office.example/notices/ai-customer-financial-data quality=0.95 injection=False"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 5 claims, 5 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev1 from src1 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev2 from src1 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev3 from src1 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev4 from src1 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev5 from src1 (sq3)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev6 from src2 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev7 from src2 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev8 from src2 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev9 from src2 (sq2)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev10 from src3 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev11 from src3 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev12 from src3 (sq1)"
+    },
+    {
+      "tool": "compare_sources",
+      "ok": true,
+      "summary": "12 items: 2 agreements, 0 contradictions, 0 dropped (unknown ids)"
+    }
+  ]
+}

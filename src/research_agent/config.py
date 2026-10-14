@@ -72,11 +72,14 @@ class Settings:
     data_dir: Path
     # Pipeline limits (code-orchestrated, not configurable by the LLM)
     max_critic_rounds: int = 3
-    worker_timeout_seconds: int = 120
+    worker_timeout_seconds: int = 480
     review_confidence_threshold: float = 0.6
     sensitive_domains: tuple[str, ...] = field(
         default=("financial", "medical", "legal")
     )
+    # Models tried in order when the main model is overloaded (503), rate-limited (429) or times out.
+    llm_fallbacks: tuple[tuple[str, str], ...] = ()
+    llm_fallback_cooldown_seconds: int = 60
 
     # ---- derived helpers ----
     @property
@@ -90,6 +93,9 @@ class Settings:
     @property
     def llm_base_url(self) -> str:
         return PROVIDER_BASE_URLS[self.llm_provider]
+
+    def api_key_for(self, provider: str) -> str:
+        return self.gemini_api_key if provider == "gemini" else self.groq_api_key
 
     @property
     def db_path(self) -> Path:
@@ -122,6 +128,29 @@ class Settings:
             )
 
 
+def _fallbacks(primary: str, gemini_model: str, groq_model: str,
+               gemini_key: str, groq_key: str) -> tuple[tuple[str, str], ...]:
+    """LLM_FALLBACKS="gemini:gemini-3.5-flash-lite,groq:qwen/qwen3.8-27b", or "none".
+
+    Default: the other provider, if its key is set. Entries without a key are skipped.
+    """
+    raw = os.getenv("LLM_FALLBACKS", "").strip()
+    if raw.lower() == "none":
+        return ()
+    if raw:
+        out = []
+        for item in raw.split(","):
+            provider, sep, model = item.strip().partition(":")
+            provider = provider.strip().lower()
+            if not sep or provider not in PROVIDER_BASE_URLS or not model.strip():
+                raise ConfigError(f"LLM_FALLBACKS entry must look like provider:model, got {item.strip()!r}")
+            out.append((provider, model.strip()))
+    else:
+        out = [("groq", groq_model)] if primary == "gemini" else [("gemini", gemini_model)]
+    keys = {"gemini": gemini_key, "groq": groq_key}
+    return tuple((p, m) for p, m in out if keys[p] and (p, m) != (primary, gemini_model if primary == "gemini" else groq_model))
+
+
 def load_settings() -> Settings:
     data_dir = Path(os.getenv("DATA_DIR", "data"))
     if not data_dir.is_absolute():
@@ -137,7 +166,8 @@ def load_settings() -> Settings:
         llm_requests_per_minute=_int("LLM_REQUESTS_PER_MINUTE", 10),
         llm_max_concurrent=_int("LLM_MAX_CONCURRENT", 3),
         llm_max_retries=_int("LLM_MAX_RETRIES", 4, minimum=0),
-        llm_timeout_seconds=_int("LLM_TIMEOUT_SECONDS", 90),
+        llm_timeout_seconds=_int("LLM_TIMEOUT_SECONDS", 120),
+        worker_timeout_seconds=_int("WORKER_TIMEOUT_SECONDS", 480, minimum=30),
         llm_reasoning_effort=_choice(
             "LLM_REASONING_EFFORT", "low", ("off", "none", "minimal", "low", "medium", "high")
         ),
@@ -149,4 +179,11 @@ def load_settings() -> Settings:
         ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip(),
         embed_model=os.getenv("EMBED_MODEL", "bge-m3").strip(),
         data_dir=data_dir,
+        llm_fallbacks=_fallbacks(
+            os.getenv("LLM_PROVIDER", "gemini").strip().lower() or "gemini",
+            os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip(),
+            os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b").strip(),
+            os.getenv("GEMINI_API_KEY", "").strip(), os.getenv("GROQ_API_KEY", "").strip(),
+        ),
+        llm_fallback_cooldown_seconds=_int("LLM_FALLBACK_COOLDOWN_SECONDS", 60, minimum=0),
     )

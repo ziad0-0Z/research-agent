@@ -357,3 +357,34 @@ def test_generate_report_tool_wrapper_returns_error_not_crash(ctx):
     out = run(generate_report_tool.on_invoke_tool(tool_ctx, '{"approval_token": "fake"}'))
     text = json.dumps(out) if not isinstance(out, str) else out
     assert "approval token" in text and "recoverable" in text
+
+
+# ---------------------------------------------------------------- agent-path speedups
+
+def test_extract_claims_auto_save_goes_through_protected_save(ctx):
+    run(web.scrape_page(ctx, P03))
+    fake = fake_runner(ClaimExtraction(claims=[
+        ExtractedClaim(claim="APIs had lower TCO for small teams.", quote=P03_QUOTE, subquestion_id="sq1"),
+        ExtractedClaim(claim="Self-hosting is always cheaper.", quote="Self-hosting is always cheaper for every team we studied.",
+                       subquestion_id="sq1"),
+    ]))
+    out = run(analysis.extract_claims(ctx, source_id="src1", subquestion_id="sq1",
+                                      subquestion="Which option has lower total cost?", run_agent=fake, auto_save=True))
+    assert [e["evidence_id"] for e in out["saved_evidence"]] == ["ev1"]
+    assert len(out["rejected"]) == 1 and "not found" in out["rejected"][0]["reason"]
+    assert "quote" not in json.dumps(out["saved_evidence"])  # researcher context stays small
+    saved = ctx.store.list_evidence(ctx.run_id)
+    assert [e.quote for e in saved] == [P03_QUOTE]
+    # running it again does not duplicate evidence
+    out2 = run(analysis.extract_claims(ctx, source_id="src1", subquestion_id="sq1",
+                                       subquestion="Which option has lower total cost?", run_agent=fake, auto_save=True))
+    assert out2["saved_evidence"] == [] and len(ctx.store.list_evidence(ctx.run_id)) == 1
+
+
+def test_scrape_tool_returns_preview_not_full_page(ctx):
+    from research_agent.tools.registry import PREVIEW_CHARS, _with_preview
+    payload = run(web.scrape_page(ctx, P03))
+    out = _with_preview(payload)
+    assert "content" not in out and len(out["preview"]) <= PREVIEW_CHARS + 1
+    assert out["source_id"] == "src1"
+    assert len(ctx.store.get_source_text(ctx.run_id, "src1")) > PREVIEW_CHARS  # full text still stored

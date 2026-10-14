@@ -29,10 +29,13 @@ async def default_run_agent(agent: Agent, prompt: str) -> Any:
 
 
 async def extract_claims(ctx: AppContext, *, source_id: str, subquestion_id: str, subquestion: str,
-                         run_agent: AgentRunner | None = None) -> dict:
+                         run_agent: AgentRunner | None = None, auto_save: bool = False) -> dict:
     """Ask the extractor for claims, then verify every quote against the source text in code.
 
-    Returns candidates only; nothing is saved until save_evidence accepts them.
+    auto_save=False: returns candidates only; nothing is saved until save_evidence accepts them.
+    auto_save=True (the agent tool): every verified candidate goes straight through the protected
+    save_evidence check. This saves one LLM turn per subquestion and means evidence survives
+    even if the worker later times out.
     """
     from ..agents.tool_agents import claim_extractor
 
@@ -56,10 +59,34 @@ async def extract_claims(ctx: AppContext, *, source_id: str, subquestion_id: str
         })
     n_ok = sum(c["quote_verified"] for c in candidates)
     ctx.log_tool("extract_claims", True, f"{source_id}: {len(candidates)} claims, {n_ok} quotes verified")
+    if auto_save:
+        return _save_verified(ctx, source_id, candidates)
     return {
         "source_id": source_id,
         "candidates": candidates,
         "note": "Call save_evidence for each candidate you want to keep. Unverified quotes will be rejected.",
+    }
+
+
+def _save_verified(ctx: AppContext, source_id: str, candidates: list[dict]) -> dict:
+    """Send verified candidates through the protected save_evidence check (which re-verifies)."""
+    from .evidence import save_evidence
+
+    results = []
+    for c in candidates:
+        if not c["quote_verified"]:
+            results.append({"claim": c["claim"], "saved": False,
+                            "reason": f"quote not found in source (best match {c['match']:.0%})"})
+            continue
+        out = save_evidence(ctx, source_id=source_id, subquestion_id=c["subquestion_id"],
+                            claim=c["claim"], quote=c["quote"])
+        results.append({"claim": c["claim"], "saved": out.get("saved", False),
+                        "evidence_id": out.get("evidence_id"), "reason": out.get("reason")})
+    # Short answer for the researcher: no quotes, so its context stays small.
+    return {
+        "source_id": source_id,
+        "saved_evidence": [{"evidence_id": r["evidence_id"], "claim": r["claim"]} for r in results if r["saved"]],
+        "rejected": [{"claim": r["claim"][:100], "reason": r["reason"]} for r in results if not r["saved"]],
     }
 
 

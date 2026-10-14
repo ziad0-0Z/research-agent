@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import re
 from datetime import date, datetime, timezone
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
@@ -71,19 +71,51 @@ class ResearchPlan(BaseModel):
         return {sq.type for sq in self.subquestions}
 
 
+class Assignment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    specialist: SpecialistType
+    subquestion_ids: list[str] = Field(min_length=1)
+
+
 class OrchestrationDecision(BaseModel):
-    """Research Orchestrator output: which specialists run and how deep."""
+    """Research Orchestrator output: which specialists run, on which subquestions, how deep."""
 
     model_config = ConfigDict(extra="forbid")
 
-    specialists: list[SpecialistType] = Field(min_length=1, max_length=3)
+    assignments: list[Assignment] = Field(min_length=1, max_length=3)
     depth: Literal["quick", "standard", "deep"]
     rationale: str = Field(min_length=5, max_length=500)
 
-    @field_validator("specialists")
-    @classmethod
-    def _dedupe(cls, value: list[str]) -> list[str]:
-        return list(dict.fromkeys(value))
+    @model_validator(mode="after")
+    def _merge_duplicate_specialists(self) -> "OrchestrationDecision":
+        merged: dict[str, list[str]] = {}
+        for a in self.assignments:
+            merged.setdefault(a.specialist, [])
+            merged[a.specialist] += [s for s in a.subquestion_ids if s not in merged[a.specialist]]
+        self.assignments = [Assignment(specialist=k, subquestion_ids=v) for k, v in merged.items()]  # type: ignore[arg-type]
+        return self
+
+    @property
+    def specialists(self) -> list[str]:
+        return [a.specialist for a in self.assignments]
+
+
+class SubquestionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    subquestion_id: str
+    summary: str = Field(description="What the saved evidence says, citing evidence ids like [ev3]")
+    evidence_ids: list[str]
+    open_issues: str = Field(description="What could not be found or stays uncertain; empty string if none")
+
+
+class ResearcherOutput(BaseModel):
+    """What a specialist returns after using its tools."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    results: list[SubquestionResult]
 
 
 class ExtractedClaim(BaseModel):
@@ -134,12 +166,29 @@ class EvidenceAnalysis(BaseModel):
     gaps: list[str] = Field(description="Subquestion ids with weak or no evidence")
 
 
+_EV_ID = re.compile(r"\bev\s*[-_]?\s*(\d+)\b", re.IGNORECASE)
+
+
+def normalize_evidence_id(raw: str) -> str:
+    """Fix formatting only: "id:ev1", "[EV1]", "ev_1" -> "ev1". Never guesses a missing prefix
+    ("v10" stays "v10"), so a wrong id is still caught by the citation check."""
+    m = _EV_ID.search(raw or "")
+    return f"ev{int(m.group(1))}" if m else (raw or "").strip()
+
+
 class Finding(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     statement: str = Field(min_length=10)
     evidence_ids: list[str] = Field(min_length=1)
     strength: Literal["strong", "moderate", "weak"]
+
+    @field_validator("evidence_ids", mode="before")
+    @classmethod
+    def _normalize_ids(cls, v: Any) -> Any:
+        if not isinstance(v, list):
+            return v
+        return list(dict.fromkeys(normalize_evidence_id(str(x)) for x in v))  # dedupe, keep order
 
 
 class ResearchReport(BaseModel):
@@ -245,6 +294,7 @@ class WorkerFindings(BaseModel):
     status: WorkerStatus
     subquestion_ids: list[str]
     evidence_ids: list[str] = Field(default_factory=list)
+    summaries: dict[str, str] = Field(default_factory=dict)
     error: str | None = None
     started_at: float
     finished_at: float

@@ -73,9 +73,14 @@ def test_report_has_no_llm_confidence_field():
     assert "confidence" not in m.ResearchReport.model_fields
 
 
-def test_orchestration_dedupes_specialists():
-    d = m.OrchestrationDecision(specialists=["risk", "risk", "market"], depth="quick", rationale="only risk+cost")
+def test_orchestration_merges_duplicate_specialists():
+    d = m.OrchestrationDecision(
+        assignments=[{"specialist": "risk", "subquestion_ids": ["sq1"]},
+                     {"specialist": "market", "subquestion_ids": ["sq2"]},
+                     {"specialist": "risk", "subquestion_ids": ["sq3", "sq1"]}],
+        depth="quick", rationale="risk and cost only")
     assert d.specialists == ["risk", "market"]
+    assert d.assignments[0].subquestion_ids == ["sq1", "sq3"]
 
 
 def test_content_hash_ignores_whitespace_and_case():
@@ -85,7 +90,7 @@ def test_content_hash_ignores_whitespace_and_case():
 
 @pytest.mark.parametrize("cls", [
     m.GuardrailVerdict, m.ResearchPlan, m.OrchestrationDecision, m.ClaimExtraction,
-    m.EvidenceAnalysis, m.ResearchReport, m.Critique, m.ClaimSupportVerdict,
+    m.EvidenceAnalysis, m.ResearchReport, m.Critique, m.ClaimSupportVerdict, m.ResearcherOutput,
 ])
 def test_llm_models_produce_strict_schema(cls):
     schema = AgentOutputSchema(cls).json_schema()

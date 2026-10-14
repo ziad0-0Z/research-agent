@@ -1,0 +1,500 @@
+{
+  "run_id": "run_86a4f8c2e5",
+  "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+  "route": {
+    "path": "standard",
+    "requires_review": false,
+    "domains": [],
+    "matched_terms": [],
+    "reason": "no sensitive domain detected"
+  },
+  "plan": {
+    "main_question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "decision_context": "A small 5-person startup is deciding between paying for cloud LLM APIs (like OpenAI or Anthropic) versus self-hosting open-source models (like Llama 3) to minimize costs and maximize product velocity.",
+    "subquestions": [
+      {
+        "id": "sq1",
+        "question": "What are the comparative costs of cloud LLM APIs versus self-hosting open-source models for low-to-medium volume startups?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Estimated monthly cost comparison at low token volumes including GPU hosting and API fees.",
+        "search_queries": [
+          "llm api versus self hosting cost startup",
+          "cost of running open source llm vs api"
+        ]
+      },
+      {
+        "id": "sq2",
+        "question": "What is the engineering effort and infrastructure required to deploy and maintain an open-source LLM for a small team?",
+        "type": "technical",
+        "priority": 1,
+        "success_criteria": "DevOps overhead, hardware requirements, and maintenance time for self-hosted models.",
+        "search_queries": [
+          "self hosting open source llm engineering effort",
+          "infrastructure to self host llama 3"
+        ]
+      },
+      {
+        "id": "sq3",
+        "question": "What are the latency, reliability, and performance differences between top cloud APIs and self-hosted models?",
+        "type": "technical",
+        "priority": 2,
+        "success_criteria": "Latency benchmarks and reliability metrics comparing APIs and self-hosted GPU instances.",
+        "search_queries": [
+          "llm api latency vs self hosted gpu",
+          "open source llm performance vs openai"
+        ]
+      },
+      {
+        "id": "sq4",
+        "question": "What are the data privacy and security risks associated with cloud LLM APIs versus self-hosted solutions?",
+        "type": "risk",
+        "priority": 2,
+        "success_criteria": "Data compliance, privacy policies, and security exposure for both approaches.",
+        "search_queries": [
+          "llm api data privacy compliance startup",
+          "security risks of third party llm apis"
+        ]
+      }
+    ]
+  },
+  "decision": {
+    "assignments": [
+      {
+        "specialist": "market",
+        "subquestion_ids": [
+          "sq1"
+        ]
+      },
+      {
+        "specialist": "technical",
+        "subquestion_ids": [
+          "sq2",
+          "sq3"
+        ]
+      },
+      {
+        "specialist": "risk",
+        "subquestion_ids": [
+          "sq4"
+        ]
+      }
+    ],
+    "depth": "standard",
+    "rationale": "All three specialists are utilized to cover market costs, technical engineering and performance, and risk compliance respectively, aligning directly with the subquestion types."
+  },
+  "assignment_corrections": [],
+  "workers": [
+    {
+      "specialist": "market",
+      "status": "success",
+      "subquestion_ids": [
+        "sq1"
+      ],
+      "evidence_ids": [
+        "ev1",
+        "ev2",
+        "ev3"
+      ],
+      "summaries": {
+        "sq1": "According to the Total Cost of Ownership report for small engineering teams, self-hosting requires 0.25 to 0.5 of a full-time engineer's ongoing labor, which causes labor costs to outweigh compute savings until token volumes reach several billion per month. Below that threshold, hosted APIs have a lower total cost of ownership [ev1, ev2, ev3]."
+      },
+      "error": null,
+      "started_at": 1791949655.5713828,
+      "finished_at": 1791949717.0593035
+    },
+    {
+      "specialist": "technical",
+      "status": "success",
+      "subquestion_ids": [
+        "sq2",
+        "sq3"
+      ],
+      "evidence_ids": [
+        "ev12",
+        "ev17",
+        "ev18",
+        "ev19",
+        "ev20",
+        "ev21",
+        "ev13",
+        "ev14",
+        "ev15",
+        "ev16"
+      ],
+      "summaries": {
+        "sq2": "Self-hosting an open-source model requires infrastructure including compute, storage, networking, and dedicated engineering labor [ev21]. Initial setup takes roughly three weeks plus ongoing maintenance [ev12]. For small teams without dedicated infrastructure engineers, self-hosting carries high overhead such as driver updates breaking serving containers [ev17], memory management tuning [ev18], and unexpected downtime [ev17, ev19].",
+        "sq3": "Dedicated self-hosted GPUs achieve lower median time-to-first-token (around 120 ms) compared to shared cloud APIs (250 to 600 ms) [ev13]. At the 99th percentile, shared APIs can experience multi-second delays during peak hours, whereas dedicated GPUs remain stable until reaching capacity [ev14], after which their latency increases sharply [ev16]. Cloud APIs also enforce rate limits requiring retry logic [ev15]."
+      },
+      "error": null,
+      "started_at": 1791949655.5713828,
+      "finished_at": 1791949722.5192494
+    },
+    {
+      "specialist": "risk",
+      "status": "success",
+      "subquestion_ids": [
+        "sq4"
+      ],
+      "evidence_ids": [
+        "ev4",
+        "ev5",
+        "ev6",
+        "ev7",
+        "ev8",
+        "ev9",
+        "ev10",
+        "ev11"
+      ],
+      "summaries": {
+        "sq4": "Cloud LLM APIs typically do not use data sent via business APIs for model training by default, though providers often retain prompts and outputs for up to 30 days for abuse detection [ev4], and zero-retention is usually restricted to enterprise tiers [ev5]. Using hosted APIs also requires sending personal and organizational data outside internal infrastructure [ev6]. Conversely, self-hosting keeps data within the organization's infrastructure but transfers all security responsibilities onto the team [ev7], requiring secure configuration, patching, audit logs, restricted access [ev10], supply chain verification [ev8], and mitigation of risks like exposed endpoints [ev9] and prompt injection [ev11]."
+      },
+      "error": null,
+      "started_at": 1791949655.5713828,
+      "finished_at": 1791949718.4080029
+    }
+  ],
+  "timeline": {
+    "wall_seconds": 66.9,
+    "sequential_seconds": 191.3,
+    "speedup": 2.86,
+    "bars": [
+      {
+        "specialist": "market",
+        "start": 0.0,
+        "end": 61.5,
+        "status": "success"
+      },
+      {
+        "specialist": "technical",
+        "start": 0.0,
+        "end": 66.9,
+        "status": "success"
+      },
+      {
+        "specialist": "risk",
+        "start": 0.0,
+        "end": 62.8,
+        "status": "success"
+      }
+    ]
+  },
+  "analysis": {
+    "agreements": [
+      "Self-hosting models requires ongoing engineering labour for maintenance, monitoring, and updates [ev1, ev12, ev19, ev21]."
+    ],
+    "contradictions": [],
+    "gaps": []
+  },
+  "report": {
+    "title": "Cloud LLM APIs vs Self-Hosting Open-Source Models for a 5-Person Startup",
+    "executive_summary": "A 5-person startup should use cloud LLM APIs rather than self-hosting open-source models to maximize product velocity and minimize total costs. Engineering labor required to maintain self-hosted models outweighs compute savings until reaching token volumes of several billion per month. This approach is contingent on handling data privacy needs through standard provider retention policies or enterprise zero-retention agreements.",
+    "findings": [
+      {
+        "statement": "Hosted APIs have a lower total cost of ownership than self-hosting for teams until token volume reaches several billion per month, as engineering labor costs outweigh compute savings.",
+        "evidence_ids": [
+          "ev2",
+          "ev3"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Keeping a self-hosted model reliable requires between 0.25 and 0.5 of a full-time engineer on an ongoing basis for organizations with fewer than ten engineers.",
+        "evidence_ids": [
+          "ev1"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Setting up serving, autoscaling, monitoring, and upgrades for an open-weight model takes a team about three weeks initially plus ongoing maintenance.",
+        "evidence_ids": [
+          "ev12"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Small teams experienced operational friction with self-hosting, including driver updates breaking serving containers, out-of-memory crashes under load, and the need for constant babysitting.",
+        "evidence_ids": [
+          "ev17",
+          "ev18",
+          "ev19"
+        ],
+        "strength": "weak"
+      },
+      {
+        "statement": "Dedicated deployments achieved lower median time-to-first-token for short prompts compared to shared APIs, though shared APIs occasionally experienced multi-second delays during peak hours.",
+        "evidence_ids": [
+          "ev13",
+          "ev14"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Hosted API providers commonly retain prompts and outputs for up to 30 days to detect abuse, though zero-retention options are available for eligible enterprise customers under a signed DPA.",
+        "evidence_ids": [
+          "ev4",
+          "ev5"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Self-hosting keeps data inside the organisation but transfers full security responsibilities to the team, including verifying model weights against checksums, patching infrastructure, and securing endpoints.",
+        "evidence_ids": [
+          "ev7",
+          "ev8",
+          "ev9"
+        ],
+        "strength": "strong"
+      }
+    ],
+    "contradictions": [],
+    "limitations": [
+      "Evidence lacks exact low-to-medium volume numeric breakdowns for specific token counts below the billion-token threshold.",
+      "Data on operational friction largely stems from anecdotal forum posts and blog sources rather than large-scale systematic studies."
+    ],
+    "recommendation": "Use cloud LLM APIs for all product development to preserve engineering velocity and avoid infrastructure overhead. Revisit self-hosting only if monthly token volume consistently exceeds several billion tokens or if strict data sovereignty requirements mandate internal infrastructure.",
+    "impact": "medium"
+  },
+  "invalid_citations": [],
+  "confidence": {
+    "score": 0.7,
+    "coverage": 1.0,
+    "covered_subquestions": "4/4",
+    "source_quality": 0.7,
+    "contradiction_penalty": 0.0,
+    "worker_factor": 1.0,
+    "explanation": "4/4 subquestions covered by usable cited evidence; mean source quality 0.70; 0 contradiction(s); 0 failed/timed-out worker(s)."
+  },
+  "tool_calls": [
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'llm api versus self hosting cost startup'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'llm api data privacy compliance startup'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'security risks of third party llm apis'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'self hosting open source llm engineering effort'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'llm api latency vs self hosted gpu'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src1 https://applied-systems-institute.example/reports/llm-tco-small-teams quality=0.9 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src2 https://data-protection-board.example/guidance/hosted-ai-data-handling quality=0.95 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src3 https://cyber-readiness-centre.example/guidance/self-hosted-llm-security quality=0.95 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src4 https://inference-notes.example/posts/gpu-rental-break-even quality=0.55 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src5 https://inference-notes.example/posts/latency-dedicated-vs-shared quality=0.55 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src6 https://builders-forum.example/t/self-hosted-llm-horror-stories quality=0.3 injection=False"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev1 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev2 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev3 from src1 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev4 from src2 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev5 from src2 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev6 from src2 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev7 from src2 (sq4)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev8 from src3 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev9 from src3 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev10 from src3 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev11 from src3 (sq4)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src4: 1 claims, 1 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev12 from src4 (sq2)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src5: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev13 from src5 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev14 from src5 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev15 from src5 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev16 from src5 (sq3)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src6: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev17 from src6 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev18 from src6 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev19 from src6 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev20 from src6 (sq2)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev21 from src1 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "compare_sources",
+      "ok": true,
+      "summary": "21 items: 1 agreements, 0 contradictions, 0 dropped (unknown ids)"
+    }
+  ]
+}

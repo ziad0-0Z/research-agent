@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from agents import RunContextWrapper, function_tool
+from pydantic import BaseModel, Field
 
 from ..context import AppContext
 from . import analysis, evidence, review, web
@@ -45,23 +46,44 @@ async def validate_source(ctx: RunContextWrapper[AppContext], url: str) -> dict:
 
 @function_tool
 async def scrape_page(ctx: RunContextWrapper[AppContext], url: str) -> dict:
-    """Fetch a web page, register it as a source and return its text as untrusted content.
+    """Fetch a web page and register it as a source. Returns its source_id and a short preview.
 
-    Blocked for local files, localhost and private network addresses.
+    The full text is stored; extract_claims reads it from there. Blocked for local files,
+    localhost and private network addresses.
 
     Args:
         url: The full http(s) URL of the page.
     """
     try:
-        return await web.scrape_page(ctx.context, url)
+        payload = await web.scrape_page(ctx.context, url)
     except ToolError as exc:
         return _error(exc)
+    return _with_preview(payload)
+
+
+PREVIEW_CHARS = 500
+
+
+def _with_preview(payload: dict) -> dict:
+    """Keep the researcher's context small: it sees a preview, not the whole page.
+
+    Every later turn re-sends the conversation, so 3 full pages (~18k chars) would make
+    every following model call slower. extract_claims reads the full stored text.
+    """
+    out = dict(payload)
+    content = out.pop("content", "")
+    out["preview"] = content[:PREVIEW_CHARS] + ("…" if len(content) > PREVIEW_CHARS else "")
+    out["note"] = "Full text stored. Call extract_claims with this source_id to get verified evidence."
+    return out
 
 
 @function_tool
 async def extract_claims(ctx: RunContextWrapper[AppContext], source_id: str, subquestion_id: str,
                          subquestion: str) -> dict:
-    """Extract candidate claims with verbatim quotes from a scraped source for one subquestion.
+    """Extract claims with verbatim quotes from a scraped source for one subquestion.
+
+    Every quote is verified against the stored page in code; verified claims are saved
+    as evidence automatically and their evidence ids are returned.
 
     Args:
         source_id: The id returned by scrape_page, e.g. "src3".
@@ -70,24 +92,44 @@ async def extract_claims(ctx: RunContextWrapper[AppContext], source_id: str, sub
     """
     try:
         return await analysis.extract_claims(ctx.context, source_id=source_id,
-                                             subquestion_id=subquestion_id, subquestion=subquestion)
+                                             subquestion_id=subquestion_id, subquestion=subquestion,
+                                             auto_save=True)
     except ToolError as exc:
         return _error(exc)
 
 
+class EvidenceInput(BaseModel):
+    source_id: str = Field(description='The source the quote comes from, e.g. "src3"')
+    subquestion_id: str = Field(description='The subquestion this evidence answers, e.g. "sq2"')
+    claim: str = Field(description="The claim in your own words (10-400 characters)")
+    quote: str = Field(description="The exact supporting text copied from the source (10-600 characters)")
+
+
+MAX_BATCH = 12
+
+
 @function_tool
-def save_evidence(ctx: RunContextWrapper[AppContext], source_id: str, subquestion_id: str,
-                  claim: str, quote: str) -> dict:
-    """Save one piece of evidence. The quote must be copied exactly from the source; it is verified.
+def save_evidence(ctx: RunContextWrapper[AppContext], items: list[EvidenceInput]) -> dict:
+    """Save evidence items you copied yourself (up to 12 per call). Not needed after extract_claims,
+    which saves verified claims automatically. Each quote must be copied exactly; it is verified.
 
     Args:
-        source_id: The source the quote comes from, e.g. "src3".
-        subquestion_id: The subquestion this evidence answers, e.g. "sq2".
-        claim: The claim in your own words (10-400 characters).
-        quote: The exact supporting text from the source (10-600 characters).
+        items: The evidence items to save.
     """
-    return evidence.save_evidence(ctx.context, source_id=source_id, subquestion_id=subquestion_id,
-                                  claim=claim, quote=quote)
+    if not items:
+        return {"error": "no items given", "recoverable": True}
+    results = []
+    for item in items[:MAX_BATCH]:
+        out = evidence.save_evidence(ctx.context, source_id=item.source_id, subquestion_id=item.subquestion_id,
+                                     claim=item.claim, quote=item.quote)
+        results.append(out)
+    saved = [r["evidence_id"] for r in results if r.get("saved")]
+    return {
+        "saved_ids": saved,
+        "rejected": [{"claim": i.claim[:80], "reason": r["reason"]}
+                     for i, r in zip(items, results) if not r.get("saved")],
+        "skipped_over_limit": max(0, len(items) - MAX_BATCH),
+    }
 
 
 @function_tool
@@ -164,6 +206,8 @@ def generate_report(ctx: RunContextWrapper[AppContext], approval_token: str) -> 
         return _error(exc)
 
 
-RESEARCH_TOOLS = [search_web, validate_source, scrape_page, extract_claims, save_evidence, score_source_quality]
-ALL_TOOLS = RESEARCH_TOOLS + [compare_sources, retrieve_evidence, validate_citation,
+# Researchers do not get save_evidence: extract_claims already saves verified claims through the
+# same protected check, and giving them both made them re-save duplicates and run out of turns.
+RESEARCH_TOOLS = [search_web, validate_source, scrape_page, extract_claims, score_source_quality]
+ALL_TOOLS = RESEARCH_TOOLS + [save_evidence, compare_sources, retrieve_evidence, validate_citation,
                               request_human_approval, generate_report]

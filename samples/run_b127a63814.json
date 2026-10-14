@@ -1,0 +1,704 @@
+{
+  "run_id": "run_b127a63814",
+  "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+  "route": {
+    "path": "standard",
+    "requires_review": false,
+    "domains": [],
+    "matched_terms": [],
+    "reason": "no sensitive domain detected"
+  },
+  "plan": {
+    "main_question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "decision_context": "A 5-person startup needs to decide between the convenience of cloud LLM APIs and the control/cost-efficiency of self-hosting open-source models for their product development.",
+    "subquestions": [
+      {
+        "id": "sq1",
+        "question": "What are the comparative monthly costs of cloud LLM APIs versus self-hosting open-source models at low-to-medium traffic volumes?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "A breakdown of cost factors including API token pricing versus GPU instance rental costs for a 5-person startup.",
+        "search_queries": [
+          "cloud LLM API vs self-hosted model cost comparison",
+          "cost of hosting Llama 3 on AWS vs OpenAI API",
+          "LLM inference cost analysis for startups"
+        ]
+      },
+      {
+        "id": "sq2",
+        "question": "What is the engineering overhead required to maintain and scale a self-hosted LLM compared to integrating a managed API?",
+        "type": "technical",
+        "priority": 1,
+        "success_criteria": "An assessment of the DevOps and maintenance effort required for self-hosting versus the integration time for APIs.",
+        "search_queries": [
+          "engineering effort self-hosting LLM vs API",
+          "challenges of maintaining self-hosted LLM infrastructure",
+          "LLM API integration vs self-hosting complexity"
+        ]
+      },
+      {
+        "id": "sq3",
+        "question": "What are the data privacy and security implications of using cloud LLM APIs versus self-hosting for a startup?",
+        "type": "risk",
+        "priority": 2,
+        "success_criteria": "A summary of compliance risks and data ownership differences between third-party APIs and private infrastructure.",
+        "search_queries": [
+          "data privacy risks cloud LLM APIs",
+          "security benefits of self-hosting open source LLMs",
+          "enterprise data compliance LLM API vs self-hosted"
+        ]
+      },
+      {
+        "id": "sq4",
+        "question": "How do performance and latency compare between top-tier cloud LLM APIs and self-hosted models on standard GPU hardware?",
+        "type": "technical",
+        "priority": 3,
+        "success_criteria": "Comparison of latency and throughput expectations for typical startup use cases.",
+        "search_queries": [
+          "latency comparison cloud LLM vs self-hosted",
+          "LLM inference performance benchmarks cloud vs local"
+        ]
+      }
+    ]
+  },
+  "decision": {
+    "assignments": [
+      {
+        "specialist": "market",
+        "subquestion_ids": [
+          "sq1"
+        ]
+      },
+      {
+        "specialist": "technical",
+        "subquestion_ids": [
+          "sq2",
+          "sq4"
+        ]
+      },
+      {
+        "specialist": "risk",
+        "subquestion_ids": [
+          "sq3"
+        ]
+      }
+    ],
+    "depth": "standard",
+    "rationale": "The decision is high-stakes for a small startup with limited resources, requiring a balanced analysis of cost, technical feasibility, and security risks to ensure long-term viability."
+  },
+  "assignment_corrections": [],
+  "workers": [
+    {
+      "specialist": "market",
+      "status": "partial",
+      "subquestion_ids": [
+        "sq1"
+      ],
+      "evidence_ids": [
+        "ev1",
+        "ev2",
+        "ev3",
+        "ev23",
+        "ev24",
+        "ev25",
+        "ev26",
+        "ev27",
+        "ev28",
+        "ev29"
+      ],
+      "summaries": {},
+      "error": "MaxTurnsExceeded: Max turns (10) exceeded",
+      "started_at": 1791944209.6771548,
+      "finished_at": 1791944389.217229
+    },
+    {
+      "specialist": "technical",
+      "status": "success",
+      "subquestion_ids": [
+        "sq2",
+        "sq4"
+      ],
+      "evidence_ids": [
+        "ev4",
+        "ev5",
+        "ev19",
+        "ev20",
+        "ev21",
+        "ev22"
+      ],
+      "summaries": {
+        "sq2": "For small teams (fewer than ten engineers), self-hosting LLMs typically results in a higher total cost of ownership compared to managed APIs due to the significant engineering labor required to maintain reliability [ev5]. The cost of this engineering effort often outweighs potential compute savings until the organization reaches a very high token volume, specifically in the range of several billion tokens per month [ev4].",
+        "sq4": "Self-hosting on dedicated hardware can provide lower and more predictable latency, with a median time-to-first-token of approximately 120ms compared to 250-600ms for shared APIs [ev19]. While dedicated hosting maintains stable latency under load, shared APIs exhibit higher variance and can experience multi-second latency at the 99th percentile during peak times [ev20, ev22]. However, shared APIs offer easier scaling, whereas self-hosted solutions are constrained by hardware capacity and may face rate-limit errors if not properly provisioned [ev21, ev22]."
+      },
+      "error": null,
+      "started_at": 1791944209.6771548,
+      "finished_at": 1791944275.0486734
+    },
+    {
+      "specialist": "risk",
+      "status": "partial",
+      "subquestion_ids": [
+        "sq3"
+      ],
+      "evidence_ids": [
+        "ev6",
+        "ev7",
+        "ev8",
+        "ev9",
+        "ev10",
+        "ev11",
+        "ev12",
+        "ev13",
+        "ev14",
+        "ev15",
+        "ev16",
+        "ev17",
+        "ev18"
+      ],
+      "summaries": {},
+      "error": "MaxTurnsExceeded: Max turns (10) exceeded",
+      "started_at": 1791944209.6771548,
+      "finished_at": 1791944352.7880118
+    }
+  ],
+  "timeline": {
+    "wall_seconds": 179.5,
+    "sequential_seconds": 388.0,
+    "speedup": 2.16,
+    "bars": [
+      {
+        "specialist": "market",
+        "start": 0.0,
+        "end": 179.5,
+        "status": "partial"
+      },
+      {
+        "specialist": "technical",
+        "start": 0.0,
+        "end": 65.4,
+        "status": "success"
+      },
+      {
+        "specialist": "risk",
+        "start": 0.0,
+        "end": 143.1,
+        "status": "partial"
+      }
+    ]
+  },
+  "analysis": {
+    "agreements": [
+      "[ev1, ev4, ev5, ev25]",
+      "[ev2, ev14, ev16, ev17]",
+      "[ev6, ev7, ev8]",
+      "[ev11, ev12, ev13]"
+    ],
+    "contradictions": [
+      {
+        "topic": "Cost-effectiveness of self-hosting vs. hosted APIs",
+        "evidence_ids_a": [
+          "ev1",
+          "ev4",
+          "ev5",
+          "ev24",
+          "ev25"
+        ],
+        "evidence_ids_b": [
+          "ev27",
+          "ev28",
+          "ev29"
+        ],
+        "explanation": "The first group (higher quality, academic/news sources) argues that hosted APIs are more cost-effective for low-to-moderate volumes due to the high cost of engineering labor required for self-hosting. The second group (lower quality, blog source) claims self-hosting is always cheaper, ignoring the overhead of engineering labor and maintenance costs. The first group is considered more reliable as it accounts for total cost of ownership (TCO) rather than just raw compute costs."
+      }
+    ],
+    "gaps": []
+  },
+  "report": {
+    "title": "Strategic Assessment: Cloud LLM APIs vs. Self-Hosting for a 5-Person Startup",
+    "executive_summary": "For a 5-person startup, cloud LLM APIs are the recommended choice due to significantly lower total cost of ownership (TCO) and reduced engineering overhead at low-to-moderate traffic volumes. Self-hosting is only advisable if the startup has extreme token volume requirements, strictly mandated data residency needs, or a requirement for deep model customization. The decision should be revisited if the company scales to billions of tokens per month or if specific regulatory requirements necessitate full control over the infrastructure.",
+    "findings": [
+      {
+        "statement": "Cloud LLM APIs offer a lower total cost of ownership for small teams because they avoid the high cost of engineering labor required to maintain self-hosted infrastructure.",
+        "evidence_ids": [
+          "ev1",
+          "ev4",
+          "ev5"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Self-hosting requires 0.25 to 0.5 of a full-time engineer's capacity for ongoing tasks such as patching, monitoring, and capacity management.",
+        "evidence_ids": [
+          "ev2",
+          "ev14",
+          "ev16"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Most major API providers do not use business API data for model training by default, and enterprise-grade zero-retention options are available for sensitive data.",
+        "evidence_ids": [
+          "ev6",
+          "ev7",
+          "ev8"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Self-hosting does not exempt a startup from compliance and security obligations; it merely shifts the responsibility for audit logging, access controls, and incident response from the provider to the internal team.",
+        "evidence_ids": [
+          "ev10",
+          "ev13",
+          "ev17"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Dedicated GPU hosting provides more predictable latency and higher throughput stability compared to shared APIs, which may experience variance and rate limits during peak usage.",
+        "evidence_ids": [
+          "ev19",
+          "ev20",
+          "ev22"
+        ],
+        "strength": "moderate"
+      }
+    ],
+    "contradictions": [
+      "A conflict exists regarding cost-effectiveness: lower-quality blog sources argue that self-hosting is always cheaper by focusing solely on GPU rental costs, while higher-quality academic and industry reports conclude that APIs are cheaper when accounting for the total cost of ownership, specifically the significant engineering labor required for self-hosting."
+    ],
+    "limitations": [
+      "The research does not provide a specific threshold for when 'low-to-moderate' traffic becomes 'high' beyond the mention of 'several billion tokens per month'.",
+      "Evidence on performance (sq4) relies on lower-quality blog sources, which may not generalize to all cloud providers or model types.",
+      "The analysis assumes a standard startup environment; specific niche requirements (e.g., specialized hardware needs) were not explored."
+    ],
+    "recommendation": "Use cloud LLM APIs immediately to maintain agility and minimize fixed costs while searching for product-market fit. Revisit the decision to self-host only when monthly token consumption approaches the billion-token scale or if specific, non-negotiable data residency or deep customization requirements emerge.",
+    "impact": "medium"
+  },
+  "invalid_citations": [],
+  "confidence": {
+    "score": 0.82,
+    "coverage": 1.0,
+    "covered_subquestions": "4/4",
+    "source_quality": 0.86,
+    "contradiction_penalty": 0.05,
+    "worker_factor": 1.0,
+    "explanation": "4/4 subquestions covered by usable cited evidence; mean source quality 0.86; 1 contradiction(s) (acknowledged); 0 failed/timed-out worker(s)."
+  },
+  "tool_calls": [
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for 'cloud LLM API vs self-hosted model cost comparison'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for 'data privacy risks cloud LLM APIs'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for 'security benefits of self-hosting open source LLMs'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for 'enterprise data compliance LLM API vs self-hosted'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for 'engineering effort self-hosting LLM vs API'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for 'latency comparison cloud LLM vs self-hosted'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src1 https://applied-systems-institute.example/reports/llm-tco-small-teams quality=0.9 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src2 https://data-protection-board.example/guidance/hosted-ai-data-handling quality=0.95 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src3 https://cyber-readiness-centre.example/guidance/self-hosted-llm-security quality=0.95 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src4 https://financial-conduct-office.example/notices/ai-customer-financial-data quality=0.95 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src5 https://inference-notes.example/posts/latency-dedicated-vs-shared quality=0.55 injection=False"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev1 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev2 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev3 from src1 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev4 from src1 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev5 from src1 (sq2)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 5 claims, 5 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev6 from src2 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev7 from src2 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev8 from src2 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev9 from src2 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev10 from src2 (sq3)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src4: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev11 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev12 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev13 from src4 (sq3)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 5 claims, 5 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev14 from src3 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev15 from src3 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev16 from src3 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev17 from src3 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev18 from src3 (sq3)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src5: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev19 from src5 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev20 from src5 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev21 from src5 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev22 from src5 (sq4)"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src6 https://northwind-tech-review.example/2026/08/llm-api-pricing-small-teams quality=0.75 injection=False"
+    },
+    {
+      "tool": "score_source_quality",
+      "ok": true,
+      "summary": "src1=0.9"
+    },
+    {
+      "tool": "score_source_quality",
+      "ok": true,
+      "summary": "src5=0.55"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "quote not found in src2 (best match 71%); copy the exact words"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "quote not found in src2 (best match 10%); copy the exact words"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "quote not found in src2 (best match 71%); copy the exact words"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "quote not found in src2 (best match 10%); copy the exact words"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 5 claims, 5 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "quote not found in src2 (best match 71%); copy the exact words"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "quote not found in src2 (best match 9%); copy the exact words"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src6: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev23 from src6 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev24 from src6 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev25 from src6 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev26 from src6 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 5 claims, 5 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "quote not found in src2 (best match 71%); copy the exact words"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "quote not found in src2 (best match 9%); copy the exact words"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 5 claims, 5 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src7 https://devpath-blog.example/self-hosting-llm-always-cheaper quality=0.45 injection=False"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src7: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev27 from src7 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev28 from src7 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev29 from src7 (sq1)"
+    },
+    {
+      "tool": "score_source_quality",
+      "ok": true,
+      "summary": "src7=0.45"
+    },
+    {
+      "tool": "score_source_quality",
+      "ok": true,
+      "summary": "src1=0.9"
+    },
+    {
+      "tool": "score_source_quality",
+      "ok": true,
+      "summary": "src6=0.75"
+    },
+    {
+      "tool": "compare_sources",
+      "ok": true,
+      "summary": "29 items: 4 agreements, 1 contradictions, 0 dropped (unknown ids)"
+    }
+  ]
+}

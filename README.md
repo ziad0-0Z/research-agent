@@ -9,7 +9,7 @@ Agentic AI Final Project — Project 3.
 | [`docs/REQUIREMENTS_MATRIX.md`](docs/REQUIREMENTS_MATRIX.md) | Every brief requirement → code → test → demo scenario |
 | [`eval/METRICS.md`](eval/METRICS.md) | Metric definitions and test sets |
 
-> Status: **Phase 1 (corpus + tools)** — Phase 0 foundations plus an offline corpus, URL/injection safety and all 11 domain tools.
+> Status: **Phases 2–3 (research pipeline + orchestration)** — code router, Planner, LLM Orchestrator, 3 parallel specialists, Evidence Analyst, Writer, computed confidence.
 
 ## Setup (Windows, cmd)
 
@@ -38,7 +38,7 @@ The smoke test sends the primary demo question to Gemini through the OpenAI Agen
 3. tool calling works (the answer must contain a code only the tool returns),
 4. a trace file is written to `data/traces/`.
 
-If Gemini is unavailable or rate-limited, switch providers in `.env`: `LLM_PROVIDER=groq` + `GROQ_API_KEY`.
+If the main model is overloaded (503), rate-limited (429) or times out, each call automatically moves to the next model in `LLM_FALLBACKS` (e.g. `groq:qwen/qwen3.8-27b,gemini:gemini-3.5-flash-lite`); the busy model is skipped for `LLM_FALLBACK_COOLDOWN_SECONDS`. Runs print which models answered and how many switches happened.
 
 ### Record once, replay anywhere
 
@@ -58,6 +58,27 @@ python scripts\phase1_check.py
 python scripts\phase1_check.py --live-search
 ```
 
+### Model speed check
+
+```bat
+python scripts\latency_check.py
+python scripts\latency_check.py --models gemini-3.5-flash-lite gemini-3.1-flash-lite --groq
+```
+
+Times one call per setting (reasoning off / none / low). Pick the fastest working one for `.env`.
+
+### Full research run (Phases 2–3)
+
+```bat
+python scripts\run_research.py
+python scripts\run_research.py --question secondary
+python scripts\run_research.py --question sensitive
+python scripts\run_research.py --question risk
+python scripts\run_research.py --question "Your own question?"
+```
+
+Draft reports are saved to `samples/<run_id>.md` (+ a `.json` with the plan, workers, timeline and tool calls).
+
 ## Layout so far
 
 ```
@@ -71,8 +92,11 @@ src/research_agent/
   guardrails/  url_safety.py (SSRF/local file blocking), injection.py (detect, sanitize, wrap)
   tools/       corpus, web (search/validate/scrape), quotes, quality, evidence, analysis, review,
                registry.py (the 11 function tools)
-  agents/      tool_agents.py (claim extractor, evidence analyst, support judge)
+  agents/      planner, orchestrator, researchers (factory: technical/market/risk), writer,
+               tool_agents (claim extractor, evidence analyst, support judge)
+  workflows/   router.py (code routing), parallel.py (timeouts, isolation, timeline),
+               confidence.py (computed confidence), pipeline.py (the full chain)
 data/corpus/   15 synthetic test pages (see its README)
-scripts/       smoke_test.py, check_models.py, phase1_check.py
+scripts/       smoke_test.py, check_models.py, phase1_check.py, run_research.py
 tests/
 ```
