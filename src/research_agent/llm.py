@@ -115,6 +115,14 @@ class FallbackModel:
     model: Any                      # anything with the SDK Model.get_response signature
     limiter: AsyncRateLimiter
     drop_reasoning: bool = True     # reasoning settings differ per provider; fallbacks use defaults
+    # Can it take tools AND a structured output (response_format) in the same request?
+    # Groq can't ("json mode cannot be combined with tool/function calling", 400), so it is skipped
+    # for tool-using agents with an output_type (the researchers) and still used for everything else.
+    tools_with_schema: bool = True
+
+
+# Providers that reject tools + response_format in one request (verified live, Oct 2026).
+NO_TOOLS_WITH_SCHEMA = {"groq"}
 
 
 class RateLimitedChatModel(OpenAIChatCompletionsModel):
@@ -123,8 +131,9 @@ class RateLimitedChatModel(OpenAIChatCompletionsModel):
     def __init__(self, model: str, openai_client: AsyncOpenAI, limiter: AsyncRateLimiter,
                  mode: LLMMode = "live", cache_dir: Path | None = None,
                  fallbacks: list[FallbackModel] | None = None, cooldown_seconds: float = 60.0,
-                 label: str | None = None):
+                 label: str | None = None, tools_with_schema: bool = True):
         super().__init__(model=model, openai_client=openai_client)
+        self.tools_with_schema = tools_with_schema
         self._limiter = limiter
         self.mode = mode
         self.cache_dir = cache_dir
@@ -163,13 +172,17 @@ class RateLimitedChatModel(OpenAIChatCompletionsModel):
             self._cache_path(key).write_bytes(pickle.dumps(response))
         return response
 
-    def _chain(self) -> list[tuple[str, Any, AsyncRateLimiter, bool]]:
-        primary = (self.label, None, self._limiter, False)  # None = this model (super().get_response)
-        return [primary] + [(f.label, f.model, f.limiter, f.drop_reasoning) for f in self.fallbacks]
+    def _chain(self, tools: Any = None, output_schema: Any = None) -> list[tuple[str, Any, AsyncRateLimiter, bool]]:
+        primary = (self.label, None, self._limiter, False, self.tools_with_schema)  # None = super().get_response
+        chain = [primary] + [(f.label, f.model, f.limiter, f.drop_reasoning, f.tools_with_schema)
+                             for f in self.fallbacks]
+        if tools and output_schema is not None:  # keep only models that accept this kind of request
+            chain = [c for c in chain if c[4]] or chain
+        return [c[:4] for c in chain]
 
     async def _call_with_fallback(self, system_instructions, input, model_settings, tools, output_schema,
                                   handoffs, tracing, *args: Any, **kwargs: Any):
-        chain = self._chain()
+        chain = self._chain(tools, output_schema)
         now = time.monotonic()
         # Skip models that failed recently, unless that would skip everything.
         ready = [c for c in chain if self._cooling_until.get(c[0], 0) <= now] or chain
@@ -235,6 +248,7 @@ def _fallback_models(settings: Settings) -> list[FallbackModel]:
             label=f"{provider}/{model}",
             model=OpenAIChatCompletionsModel(model=model, openai_client=build_client(settings, provider)),
             limiter=AsyncRateLimiter(settings.llm_requests_per_minute, settings.llm_max_concurrent),
+            tools_with_schema=provider not in NO_TOOLS_WITH_SCHEMA,
         ))
     return out
 
@@ -253,6 +267,7 @@ def get_model(settings: Settings | None = None) -> RateLimitedChatModel:
             mode=settings.llm_mode, cache_dir=settings.llm_cache_dir,
             fallbacks=fallbacks, cooldown_seconds=settings.llm_fallback_cooldown_seconds,
             label=f"{settings.llm_provider}/{settings.model_name}",
+            tools_with_schema=settings.llm_provider not in NO_TOOLS_WITH_SCHEMA,
         )
     return _model
 

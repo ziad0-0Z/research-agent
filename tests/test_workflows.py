@@ -9,7 +9,7 @@ from research_agent import config as cfg
 import json
 
 from research_agent.models import (
-    Assignment, CitationCheck, Contradiction, CriticReview, EvidenceAnalysis, Finding, FindingCheck,
+    GuardrailVerdict, Assignment, CitationCheck, Contradiction, CriticReview, EvidenceAnalysis, Finding, FindingCheck,
     OrchestrationDecision, ResearcherOutput, ResearchPlan, ResearchReport, SubQuestion, SubquestionResult,
 )
 from research_agent.store import Store
@@ -146,9 +146,23 @@ def fake_critic_review(prompt, calls=None):
     return CriticReview(findings=checks, contradictions_ignored=[], other_issues=[])
 
 
-def make_fake_run_agent(break_worker=None, writer_fixes_on_revision=False, critic_calls=None):
+def fake_guard(prompt):
+    """Plays the Guard Agent: blocks off-scope chat, labels the domain."""
+    q = prompt.split("<user_request>", 1)[1].lower()
+    if "poem" in q:
+        return GuardrailVerdict(verdict="block", category="off_scope", domain="other", reason="creative writing")
+    domain = "financial" if "bank" in q else "technology"
+    return GuardrailVerdict(verdict="allow", category="valid_research", domain=domain, reason="research question")
+
+
+def make_fake_run_agent(break_worker=None, writer_fixes_on_revision=False, critic_calls=None, guard_error=False,
+                        impact="medium", writer_calls=None):
     async def fake(agent, prompt, ctx, max_turns):
         name = agent.name
+        if name == "Input Guard":
+            if guard_error:
+                raise RuntimeError("503 model overloaded")
+            return fake_guard(prompt)
         if name == "Critic":
             return fake_critic_review(prompt, critic_calls)
         if name == "Planner":
@@ -186,6 +200,8 @@ def make_fake_run_agent(break_worker=None, writer_fixes_on_revision=False, criti
                                                                   explanation="different volumes")],
                                     gaps=[])
         if name == "Writer":
+            if writer_calls is not None:
+                writer_calls.append(prompt)
             ids = re.findall(r'"id": "(ev\d+)"', prompt)
             fixed = writer_fixes_on_revision and "Revision instructions" in prompt
             bad = [] if fixed else [Finding(statement="Invented citation.", evidence_ids=["id:ev999"], strength="weak")]
@@ -197,7 +213,7 @@ def make_fake_run_agent(break_worker=None, writer_fixes_on_revision=False, criti
                 contradictions=["Sources differ on cost depending on volume."],
                 limitations=["Offline synthetic corpus."],
                 recommendation="Start with hosted APIs and revisit at higher volume.",
-                impact="medium")
+                impact=impact)
         raise AssertionError(f"unexpected agent {name}")
     return fake
 
@@ -212,8 +228,12 @@ def test_pipeline_end_to_end_offline(settings):
     assert result.route.path == "standard"
     assert [w.status for w in result.workers] == ["success", "success", "success"]
     # The fake Writer keeps inventing ev999: REVISE, then the same blocking issue again → FAIL (no progress).
-    assert events == ["routed", "planned", "delegated", "research_started", "research_done",
-                      "analysed", "drafted", "critic_round", "revised", "critic_round", "critic_done", "checked"]
+    assert events == ["input_checked", "routed", "planned", "delegated", "research_started", "research_done",
+                      "analysed", "drafted", "critic_round", "revised", "critic_round", "critic_done", "checked",
+                      "output_checked", "rejected"]
+    # The Critic could not fix ev999, so the output guardrail refuses to release the report.
+    assert result.status == "rejected_by_guardrail" and result.final_markdown is None
+    assert any(i.check == "citations" and "ev999" in i.message for i in result.output_check.issues)
     assert len(result.analysis.contradictions) == 1
     assert result.invalid_citations == [{"evidence_id": "ev999",
                                          "reason": "evidence id does not exist in this run"}]
@@ -289,6 +309,7 @@ def test_pipeline_flags_sensitive_question(settings):
         settings=settings, store=Store(":memory:"), run_agent=make_fake_run_agent()))
     assert result.route.requires_review and result.ctx.requires_review
     assert "financial" in result.ctx.review_reasons[0]
+    assert result.input_check.domain == "financial"
 
 
 def test_pipeline_rejects_empty_question(settings):

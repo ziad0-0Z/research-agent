@@ -1,0 +1,574 @@
+{
+  "run_id": "run_691af84e97",
+  "question": "Should our bank process customer financial data with a self-hosted LLM?",
+  "status": "paused_for_review",
+  "input_check": {
+    "allowed": true,
+    "category": "valid_research",
+    "reason": "The request asks a valid business and technology decision question regarding financial data processing.",
+    "checked_by": "guard_agent",
+    "domain": "financial",
+    "matched": [],
+    "requires_review": false
+  },
+  "output_check": {
+    "passed": true,
+    "checks_run": [
+      "schema",
+      "structure",
+      "citations",
+      "support",
+      "unconfirmed_actions",
+      "links",
+      "injection"
+    ],
+    "issues": []
+  },
+  "gate_reasons": [
+    "sensitive domain (financial): human review required before finalising",
+    "high-impact recommendation (hard to reverse)"
+  ],
+  "route": {
+    "path": "sensitive",
+    "requires_review": true,
+    "domains": [
+      "financial"
+    ],
+    "matched_terms": [
+      "bank",
+      "customer financial"
+    ],
+    "reason": "sensitive domain (financial): human review required before finalising"
+  },
+  "plan": {
+    "main_question": "Should our bank process customer financial data with a self-hosted LLM?",
+    "decision_context": "Bank technology leadership is deciding whether to deploy an on-premise or self-hosted large language model for handling sensitive customer financial data while meeting regulatory requirements.",
+    "subquestions": [
+      {
+        "id": "sq1",
+        "question": "What are the regulatory and compliance requirements for banks processing customer financial data using self-hosted AI models?",
+        "type": "risk",
+        "priority": 1,
+        "success_criteria": "Clear identification of compliance frameworks like GLBA, GDPR, and OCC guidelines applicable to self-hosted LLMs in banking.",
+        "search_queries": [
+          "banking regulations self hosted AI LLM compliance",
+          "financial data processing LLM regulatory requirements"
+        ]
+      },
+      {
+        "id": "sq2",
+        "question": "What infrastructure and hardware costs are required to self-host and maintain an enterprise-grade LLM for financial workloads?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Hardware requirements such as GPU clusters, RAM, and estimated total cost of ownership for self-hosted LLMs.",
+        "search_queries": [
+          "cost to self host enterprise LLM infrastructure",
+          "GPU requirements for self hosting LLM banking"
+        ]
+      },
+      {
+        "id": "sq3",
+        "question": "What are the performance, latency, and accuracy benchmarks of open-source LLMs compared to commercial APIs for financial text processing?",
+        "type": "technical",
+        "priority": 2,
+        "success_criteria": "Comparison of open-source models like Llama 3 or Mixtral against commercial APIs on financial NLP tasks.",
+        "search_queries": [
+          "open source LLM accuracy financial NLP benchmarks",
+          "self hosted LLM latency financial services"
+        ]
+      },
+      {
+        "id": "sq4",
+        "question": "What security vulnerabilities and data leakage risks are associated with deploying self-hosted LLMs in a banking environment?",
+        "type": "risk",
+        "priority": 1,
+        "success_criteria": "Analysis of model extraction, prompt injection, and data retention risks for on-premise deployments.",
+        "search_queries": [
+          "security risks self hosted LLM enterprise",
+          "LLM data leakage mitigation on premise banking"
+        ]
+      }
+    ]
+  },
+  "decision": {
+    "assignments": [
+      {
+        "specialist": "risk",
+        "subquestion_ids": [
+          "sq1",
+          "sq4"
+        ]
+      },
+      {
+        "specialist": "market",
+        "subquestion_ids": [
+          "sq2"
+        ]
+      },
+      {
+        "specialist": "technical",
+        "subquestion_ids": [
+          "sq3"
+        ]
+      }
+    ],
+    "depth": "standard",
+    "rationale": "All three specialists are required to thoroughly cover the regulatory, financial, and technical aspects of self-hosting an LLM for banking, using standard depth for a balanced evaluation."
+  },
+  "assignment_corrections": [],
+  "workers": [
+    {
+      "specialist": "risk",
+      "status": "success",
+      "subquestion_ids": [
+        "sq1",
+        "sq4"
+      ],
+      "evidence_ids": [
+        "ev1",
+        "ev2",
+        "ev3",
+        "ev4",
+        "ev5",
+        "ev6",
+        "ev7"
+      ],
+      "summaries": {
+        "sq1": "Regulated financial institutions processing customer financial data with AI models remain fully responsible for that data regardless of whether the model is self-hosted or provided by third parties [ev1]. Self-hosting does not remove regulatory obligations [ev2], and institutions using in-house deployments must demonstrate proper access controls, audit logging, model change management, and incident response [ev3], requiring approval from compliance and risk functions prior to implementation [ev4]. Open issues: Specific references to GLBA, GDPR, and OCC guidelines were not explicitly mentioned in the retrieved supervisory notice, although general compliance and regulatory responsibilities are clearly stated.",
+        "sq4": "Organisations self-hosting language models assume security responsibilities typically managed by hosted providers, including verifying model weights against published checksums [ev5]. Inference servers require regular patching, and exposed unauthenticated inference endpoints present risks [ev6]. Furthermore, self-hosting does not prevent prompt injection vulnerabilities, meaning inputs and retrieved documents must be treated as untrusted [ev7]. Open issues: Model extraction and specific data retention risk details were not explicitly covered in the retrieved security guidance."
+      },
+      "error": null,
+      "started_at": 1791975312.4800556,
+      "finished_at": 1791975374.6945176
+    },
+    {
+      "specialist": "market",
+      "status": "success",
+      "subquestion_ids": [
+        "sq2"
+      ],
+      "evidence_ids": [
+        "ev14",
+        "ev15",
+        "ev16",
+        "ev17",
+        "ev18",
+        "ev19",
+        "ev20"
+      ],
+      "summaries": {
+        "sq2": "The total cost of ownership for a self-hosted LLM includes compute, storage, networking, and engineering labour [ev14]. Running a single inference-class GPU around the clock costs roughly $1,100 to $2,900 per month (before storage, networking, and monitoring), with on-demand rental rates ranging from $1.50 to $4.00 per hour [ev17, ev18]. Serving 7B-14B parameter models comfortably requires a single high-memory GPU, whereas 70B-class models require two to four GPUs [ev19]. In addition to hardware, ongoing production maintenance requires 0.25 to 0.5 of a full-time engineer [ev15], meaning labour costs can outweigh compute savings until token volumes reach between 1 billion and several billion tokens per month [ev16, ev20]."
+      },
+      "error": null,
+      "started_at": 1791975312.4800556,
+      "finished_at": 1791975377.4252074
+    },
+    {
+      "specialist": "technical",
+      "status": "success",
+      "subquestion_ids": [
+        "sq3"
+      ],
+      "evidence_ids": [
+        "ev8",
+        "ev9",
+        "ev10",
+        "ev11",
+        "ev12",
+        "ev13"
+      ],
+      "summaries": {
+        "sq3": "Top open-weight models scored within 5 to 10 percent of hosted frontier APIs on tasks like summarization, classification, and retrieval-augmented question answering (RAG) [ev8], with users unable to reliably distinguish their outputs in blind preference tests [ev9]. However, open models trailed by 15 to 25 percent on multi-step reasoning, complex coding, and long-context tasks [ev10], especially models with fewer than 15 billion parameters [ev11]. In terms of latency, dedicated GPU deployments achieved a median time-to-first-token of about 120 milliseconds for short prompts [ev12], outperforming shared APIs during peak hours when shared API latencies occasionally spiked to several seconds [ev13]. Open issues: Specific financial NLP benchmark datasets (like FinQA or ConvFinQA) were not directly tested in the available general evaluations."
+      },
+      "error": null,
+      "started_at": 1791975312.4800556,
+      "finished_at": 1791975376.2975407
+    }
+  ],
+  "timeline": {
+    "wall_seconds": 64.9,
+    "sequential_seconds": 191.0,
+    "speedup": 2.94,
+    "bars": [
+      {
+        "specialist": "risk",
+        "start": 0.0,
+        "end": 62.2,
+        "status": "success"
+      },
+      {
+        "specialist": "market",
+        "start": 0.0,
+        "end": 64.9,
+        "status": "success"
+      },
+      {
+        "specialist": "technical",
+        "start": 0.0,
+        "end": 63.8,
+        "status": "success"
+      }
+    ]
+  },
+  "analysis": {
+    "agreements": [
+      "Regulated financial institutions processing customer financial data with AI remain fully responsible for that data regardless of whether the model is self-hosted or provided by third parties [ev1, ev2].",
+      "Open-weight models perform competitively on tasks like summarisation, classification, and retrieval-augmented question answering, but lag behind hosted models on complex reasoning [ev8, ev10].",
+      "Self-hosting models involves substantial compute and operational costs, including engineering labour and hardware [ev14, ev16, ev18, ev19]."
+    ],
+    "contradictions": [],
+    "gaps": []
+  },
+  "report": {
+    "title": "Research Report: Processing Customer Financial Data with a Self-Hosted LLM",
+    "executive_summary": "Deploying a self-hosted LLM for processing customer financial data requires the bank to retain full regulatory responsibility while assuming new operational burdens like hardware maintenance and supply chain security. Open-weight models match hosted alternatives within 5 to 10 percent on standard tasks like summarisation and classification, but incur significant infrastructure and engineering costs. The decision ultimately depends on achieving a high volume threshold of 1 to 3 billion tokens per month to justify the total cost of ownership against commercial APIs.",
+    "findings": [
+      {
+        "statement": "Regulated financial institutions processing customer financial data remain fully responsible for that data regardless of whether the model runs on in-house infrastructure or is provided by a third party.",
+        "evidence_ids": [
+          "ev1",
+          "ev2"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Institutions deploying in-house AI models must implement and demonstrate rigorous access controls, audit logging, model change management, and incident response.",
+        "evidence_ids": [
+          "ev3"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Self-hosting language models introduces distinct security responsibilities, including verifying model weights from public hubs against published checksums and preventing unauthenticated inference endpoints.",
+        "evidence_ids": [
+          "ev5",
+          "ev6"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "On tasks such as summarisation, classification, and retrieval-augmented question answering, the best open-weight models score within 5 to 10 percent of the strongest hosted models.",
+        "evidence_ids": [
+          "ev8"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Open-weight models trail top hosted models by 15 to 25 percent on multi-step reasoning, complex coding, and long-context tasks, with models under 15 billion parameters experiencing the largest drops.",
+        "evidence_ids": [
+          "ev10",
+          "ev11"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Maintaining a self-hosted model in production requires between 0.25 and 0.5 of a full-time engineer on an ongoing basis for tasks such as patching drivers, monitoring quality, and upgrading models.",
+        "evidence_ids": [
+          "ev15"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "The break-even point for self-hosting a mid-sized model compared to API prices falls between 1 and 3 billion tokens per month, as engineering labour costs outweigh compute savings below that volume.",
+        "evidence_ids": [
+          "ev16",
+          "ev20"
+        ],
+        "strength": "moderate"
+      }
+    ],
+    "contradictions": [],
+    "limitations": [
+      "The evidence does not provide specific quantitative benchmarks for proprietary financial text processing accuracy beyond general NLP task categories.",
+      "Cost estimates rely on variable cloud rental rates and generalized engineering labour costs rather than institution-specific internal salary scales."
+    ],
+    "recommendation": "Proceed with evaluating a self-hosted LLM deployment only if projected customer financial data processing volumes exceed 1 to 3 billion tokens per month; otherwise, rely on commercial APIs. Before implementation, secure formal approval from compliance and risk functions, and ensure dedicated engineering resources are allocated for security patching, checksum verification, and audit logging.",
+    "impact": "high"
+  },
+  "invalid_citations": [],
+  "confidence": {
+    "score": 0.85,
+    "coverage": 1.0,
+    "covered_subquestions": "4/4",
+    "source_quality": 0.85,
+    "contradiction_penalty": 0.0,
+    "worker_factor": 1.0,
+    "explanation": "4/4 subquestions covered by usable cited evidence; mean source quality 0.85; 0 contradiction(s); 0 failed/timed-out worker(s)."
+  },
+  "critic": {
+    "verdict": "PASS",
+    "stop_reason": "passed",
+    "best_round": 1,
+    "rounds": [
+      {
+        "round": 1,
+        "verdict": "PASS",
+        "blocking": 0,
+        "advisory": 0,
+        "issues": [],
+        "autofixes": [],
+        "support": {
+          "1": "supported",
+          "2": "supported",
+          "3": "supported",
+          "4": "supported",
+          "5": "supported",
+          "6": "supported",
+          "7": "supported"
+        },
+        "retrieval": "hybrid",
+        "judged": 7,
+        "reused": 0,
+        "seconds": 48.43,
+        "revision_instructions": []
+      }
+    ]
+  },
+  "tool_calls": [
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'banking regulations self hosted AI LLM compliance'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'security risks self hosted LLM enterprise'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'open source LLM accuracy financial NLP benchmarks'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'self hosted LLM latency financial services'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'cost to self host enterprise LLM infrastructure'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src1 https://financial-conduct-office.example/notices/ai-customer-financial-data quality=0.95 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src2 https://cyber-readiness-centre.example/guidance/self-hosted-llm-security quality=0.95 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src3 https://openeval-lab.example/papers/open-vs-hosted-2026 quality=0.9 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src4 https://inference-notes.example/posts/latency-dedicated-vs-shared quality=0.55 injection=False"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'GPU requirements for self hosting LLM banking'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src5 https://applied-systems-institute.example/reports/llm-tco-small-teams quality=0.9 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src6 https://inference-notes.example/posts/gpu-rental-break-even quality=0.55 injection=False"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev1 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev2 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev3 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev4 from src1 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev5 from src2 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev6 from src2 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev7 from src2 (sq4)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev8 from src3 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev9 from src3 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev10 from src3 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev11 from src3 (sq3)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src4: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev12 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev13 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src5: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev14 from src5 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev15 from src5 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev16 from src5 (sq2)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src6: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev17 from src6 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev18 from src6 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev19 from src6 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev20 from src6 (sq2)"
+    },
+    {
+      "tool": "compare_sources",
+      "ok": true,
+      "summary": "20 items: 3 agreements, 0 contradictions, 0 dropped (unknown ids)"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Regulated financial institutions processing customer financial data remain fully'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Institutions deploying in-house AI models must implement and demonstrate rigorou'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Self-hosting language models introduces distinct security responsibilities, incl'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'On tasks such as summarisation, classification, and retrieval-augmented question'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Open-weight models trail top hosted models by 15 to 25 percent on multi-step rea'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Maintaining a self-hosted model in production requires between 0.25 and 0.5 of a'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'The break-even point for self-hosting a mid-sized model compared to API prices f'"
+    },
+    {
+      "tool": "request_human_approval",
+      "ok": true,
+      "summary": "pending: sensitive domain (financial): human review required before finalising; high-impact recommendation (hard to reverse)"
+    }
+  ]
+}

@@ -9,7 +9,7 @@ Agentic AI Final Project — Project 3.
 | [`docs/REQUIREMENTS_MATRIX.md`](docs/REQUIREMENTS_MATRIX.md) | Every brief requirement → code → test → demo scenario |
 | [`eval/METRICS.md`](eval/METRICS.md) | Metric definitions and test sets |
 
-> Status: **Phase 4 (Writer ⇄ Critic + hybrid RAG)** — code router, Planner, LLM Orchestrator, 3 parallel specialists, Evidence Analyst, Writer, Critic loop (verdict decided in code), hybrid BM25 + embedding retrieval, computed confidence.
+> Status: **Phase 5 (guardrails + human review)** — input guardrail (regex + Guard Agent), code router, Planner, LLM Orchestrator, 3 parallel specialists, Evidence Analyst, Writer, Critic loop (verdict decided in code), hybrid BM25 + embedding retrieval, computed confidence, output guardrail + report-bound approval token, impact gate, persisted human review queue with resume.
 
 ## Setup (Windows, cmd)
 
@@ -99,8 +99,30 @@ python scripts\run_research.py --plant-fault
 `--plant-fault` is demo scenario 6: an unsupported claim is added to the first draft, citing a real
 quote that says the opposite. The Critic must flag it (REVISE) and the Writer must remove or fix it.
 
-Draft reports are saved to `samples/<run_id>.md` (+ a `.json` with the plan, workers, timeline,
-Critic rounds and tool calls).
+Reports are saved to `samples/<run_id>.md` (final report if released, otherwise the draft) + a `.json`
+with the plan, workers, timeline, Critic rounds, guardrail results and tool calls.
+
+### Guardrails and human review (Phase 5)
+
+```bat
+python scripts\run_research.py --question attack            :: demo 7: blocked by the input guardrail, no agent runs
+python scripts\run_research.py --question offscope          :: blocked by the Guard Agent
+python scripts\run_research.py --fault fake_citation        :: demo 9: output guardrail rejects a fake citation
+python scripts\run_research.py --fault tampered_quote       :: demo 9b: output guardrail catches an altered quote
+python scripts\run_research.py --question sensitive         :: demo 3 + 11: paused for human review
+python scripts\review.py list
+python scripts\review.py show RUN_ID
+python scripts\review.py approve RUN_ID --note "checked"
+python scripts\review.py changes RUN_ID --note "add the PCI DSS limitation"   :: revise → Critic → back to the queue
+python scripts\review.py reject RUN_ID --note "not enough evidence"
+python eval\guardrail_eval.py --live                        :: catch rate + false positives, regex + Guard Agent
+```
+
+Release path, all in code: output guardrail (schema, citations exist, quotes still match the page,
+no not-supported evidence, no claimed actions a tool did not confirm, no unknown URLs, no injected text)
+→ approval token bound to the report's hash → impact gate (sensitive domain, Critic FAIL, guard outage,
+high impact, confidence < 0.6) → human review queue or `generate_report`. A paused run resumes from
+the database in a new process; it passes the output guardrail again and gets a fresh token.
 
 ## Layout so far
 
@@ -112,17 +134,20 @@ src/research_agent/
   context.py   AppContext passed to tools (run id, store, tool log, review flags)
   store/db.py  SQLite: runs, sources, evidence, reviews, memory
   tracing.py   SDK tracing → local JSONL (+ optional OpenAI dashboard)
-  guardrails/  url_safety.py (SSRF/local file blocking), injection.py (detect, sanitize, wrap)
+  guardrails/  url_safety.py (SSRF/local file blocking), injection.py (detect, sanitize, wrap),
+               input.py (regex pre-filter + Guard verdict in code), sdk.py (SDK input_guardrail on the
+               Planner), output.py (release checks)
   tools/       corpus, web (search/validate/scrape), quotes, quality, evidence, analysis, review,
                registry.py (the 11 function tools)
-  agents/      planner, orchestrator, researchers (factory: technical/market/risk), writer, critic,
+  agents/      guard, planner, orchestrator, researchers (factory: technical/market/risk), writer, critic,
                tool_agents (claim extractor, evidence analyst, support judge)
   rag/         embeddings.py (Ollama → Gemini → none, vector cache), hybrid.py (BM25 + dense, RRF)
   workflows/   router.py (code routing), parallel.py (timeouts, isolation, timeline),
-               eval_loop.py (Writer ⇄ Critic), confidence.py (computed confidence), pipeline.py
+               eval_loop.py (Writer ⇄ Critic), confidence.py (computed confidence), pipeline.py,
+               release.py (output guardrail → token → impact gate), resume.py (review queue + resume)
 data/corpus/   15 synthetic test pages (see its README)
-data/golden/   retrieval.json (recall@5 test set)
-eval/          METRICS.md, retrieval_eval.py
-scripts/       smoke_test.py, check_models.py, phase1_check.py, run_research.py
+data/golden/   retrieval.json (recall@5 test set), guardrails.json (attacks + normal questions)
+eval/          METRICS.md, retrieval_eval.py, guardrail_eval.py
+scripts/       smoke_test.py, check_models.py, phase1_check.py, run_research.py, review.py
 tests/
 ```

@@ -33,6 +33,8 @@ Rules:
 - Cite only evidence ids from the "Valid evidence ids" list, written exactly like ev7
   (no prefixes such as "id:", no brackets, no quotes). Never invent ids.
 - Never state a claim more strongly than its quote supports; keep conditions (team size, volume).
+- You only read sources. Never say the report was reviewed or approved by anyone, and never claim
+  that you tested, benchmarked, measured or deployed anything. Do not add URLs.
 - Prefer high-quality sources; when a low-quality source disagrees with a high-quality one, say so.
 - If revision instructions are included, fix every point they raise and keep the other findings
   unchanged."""

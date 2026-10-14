@@ -9,6 +9,7 @@ from functools import lru_cache
 
 from agents import Agent
 
+from ..guardrails.sdk import planner_input_guardrail
 from ..llm import get_model, precise_settings
 from ..models import ResearchPlan
 
@@ -39,4 +40,5 @@ Rules:
 @lru_cache(maxsize=1)
 def planner() -> Agent:
     return Agent(name="Planner", instructions=PLANNER_INSTRUCTIONS, model=get_model(),
-                 model_settings=precise_settings(), output_type=ResearchPlan)
+                 model_settings=precise_settings(), output_type=ResearchPlan,
+                 input_guardrails=[planner_input_guardrail])

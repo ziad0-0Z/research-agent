@@ -6,6 +6,7 @@ the report can never claim an action no tool confirmed).
 """
 from __future__ import annotations
 
+import hashlib
 import secrets
 import time
 import uuid
@@ -38,7 +39,9 @@ class AppContext:
     final_report: ResearchReport | None = None
     tool_log: list[ToolCallRecord] = field(default_factory=list)
     stage_log: list[dict[str, Any]] = field(default_factory=list)
+    input_check: Any = None  # guardrails.input.InputCheck, set by the pipeline before planning
     _approval_token: str | None = None
+    _approved_hash: str | None = None
     _counters: dict[str, int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -65,10 +68,23 @@ class AppContext:
     def log_stage(self, stage: str, **data: Any) -> None:
         self.stage_log.append({"stage": stage, "at": time.time(), **data})
 
-    # ---- approval token: issued by Python only, after checks pass ----
+    # ---- approval token: issued by Python only, after the output guardrail passes ----
+    # The token is bound to the exact report it approved: if the report changes afterwards, the token
+    # is void. It lives only in memory (never stored), so a resumed run must pass the checks again.
+    def _report_hash(self) -> str | None:
+        if self.final_report is None:
+            return None
+        return hashlib.sha256(self.final_report.model_dump_json().encode("utf-8")).hexdigest()
+
     def issue_approval_token(self) -> str:
         self._approval_token = secrets.token_hex(8)
+        self._approved_hash = self._report_hash()
         return self._approval_token
 
+    def revoke_approval_token(self) -> None:
+        self._approval_token = None
+        self._approved_hash = None
+
     def approval_token_valid(self, token: str) -> bool:
-        return bool(self._approval_token) and secrets.compare_digest(self._approval_token, token or "")
+        return (bool(self._approval_token) and secrets.compare_digest(self._approval_token, token or "")
+                and self._approved_hash == self._report_hash())

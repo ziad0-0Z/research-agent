@@ -97,7 +97,7 @@ class _FakeModel:
         return self.reply
 
 
-def _chain_model(monkeypatch, primary: _FakeModel, *fallbacks: _FakeModel, cooldown=60.0):
+def _chain_model(monkeypatch, primary: _FakeModel, *fallbacks: _FakeModel, cooldown=60.0, no_tools_schema=()):
     from agents import OpenAIChatCompletionsModel
     from openai import AsyncOpenAI
     from research_agent.llm import FallbackModel, RateLimitedChatModel
@@ -107,7 +107,8 @@ def _chain_model(monkeypatch, primary: _FakeModel, *fallbacks: _FakeModel, coold
     monkeypatch.setattr(OpenAIChatCompletionsModel, "get_response", primary_call)
     return RateLimitedChatModel(
         "main", AsyncOpenAI(api_key="x"), AsyncRateLimiter(100, 5), label="gemini/main", cooldown_seconds=cooldown,
-        fallbacks=[FallbackModel(f"fb{i}", fb, AsyncRateLimiter(100, 5)) for i, fb in enumerate(fallbacks)])
+        fallbacks=[FallbackModel(f"fb{i}", fb, AsyncRateLimiter(100, 5), tools_with_schema=i not in no_tools_schema)
+                   for i, fb in enumerate(fallbacks)])
 
 
 def _ask(model):
@@ -162,3 +163,17 @@ def test_fallbacks_from_env(monkeypatch, tmp_path):
     monkeypatch.setenv("LLM_FALLBACKS", "openai-gpt")
     with pytest.raises(cfg.ConfigError):
         cfg.load_settings()
+
+
+def test_tool_agents_with_output_type_skip_providers_that_reject_it(monkeypatch):
+    """Live bug (Oct 2026): researchers fell back to Groq, which returns 400 for tools + response_format."""
+    from agents import ModelSettings
+    groq, gemini_b = _FakeModel(reply="from groq"), _FakeModel(reply="from gemini b")
+    model = _chain_model(monkeypatch, _FakeModel(error=_overloaded()), groq, gemini_b, no_tools_schema=(0,))
+    tools, schema = [object()], object()
+    out = asyncio.run(model.get_response("sys", "hi", ModelSettings(), tools, schema, [], None))
+    assert out == "from gemini b" and groq.calls == 0
+    # Plain structured output (no tools) may still use Groq.
+    model2 = _chain_model(monkeypatch, _FakeModel(error=_overloaded()), _FakeModel(reply="from groq"),
+                          no_tools_schema=(0,))
+    assert asyncio.run(model2.get_response("sys", "hi", ModelSettings(), [], schema, [], None)) == "from groq"

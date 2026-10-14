@@ -286,9 +286,10 @@ def _critique(issues: list[Issue], verdict: str) -> Critique:
     )
 
 
-def revision_prompt(writer_prompt: str, report: ResearchReport, instructions: list[str]) -> str:
+def revision_prompt(writer_prompt: str, report: ResearchReport, instructions: list[str],
+                    source: str = "the Critic") -> str:
     return (writer_prompt + "\n\nPrevious draft (JSON):\n" + report.model_dump_json(indent=1)
-            + "\n\nRevision instructions (from the Critic):\n" + "\n".join(f"- {i}" for i in instructions)
+            + f"\n\nRevision instructions (from {source}):\n" + "\n".join(f"- {i}" for i in instructions)
             + "\nKeep findings that are not mentioned above exactly as they are.")
 
 

@@ -1,6 +1,7 @@
-"""The research pipeline (Phases 2-3).
+"""The research pipeline (Phases 2-5).
 
     question
+      → [CODE+LLM] input guardrail      regex pre-filter → Guard Agent → verdict in code   (blocks attacks)
       → [CODE]  route_question          sensitive domain? → review required
       → [LLM]   Planner                 ResearchPlan                    (chain step 1)
       → [LLM]   Research Orchestrator   who researches what, how deep   (orchestrator-workers)
@@ -10,8 +11,8 @@
       → [LLM]   Writer                  ResearchReport                  (chain step 3)
       → [LOOP]  Writer ⇄ Critic         code checks + RAG + LLM review, verdict in code (evaluator-optimizer)
       → [CODE]  confidence
-
-Phase 5 adds the guardrails and human-review gate.
+      → [CODE]  release: output guardrail → approval token → impact gate
+                → paused_for_review (resume later) | generate_report → completed | rejected_by_guardrail
 Every stage runs inside one trace with named spans, and is logged to ctx.stage_log.
 """
 from __future__ import annotations
@@ -22,10 +23,12 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from agents import Agent, Runner, custom_span, trace
+from agents import Agent, Runner, custom_span, guardrail_span, trace
 
 from ..config import Settings, load_settings
 from ..context import AppContext
+from ..guardrails.input import InputCheck, check_input
+from ..guardrails.output import OutputCheck
 from ..models import (
     EvidenceAnalysis, OrchestrationDecision, ResearcherOutput, ResearchPlan, ResearchReport, WorkerFindings,
 )
@@ -37,6 +40,7 @@ from ..tools.web import ToolError
 from .confidence import compute_confidence
 from .eval_loop import LoopResult, writer_critic_loop
 from .parallel import WorkerTask, run_parallel, timeline
+from .release import Release, release_report
 from .router import AssignmentPlan, RouteDecision, route_question, validate_assignments
 
 RunAgent = Callable[[Agent, str, AppContext, int], Awaitable[Any]]
@@ -52,6 +56,15 @@ class PipelineError(RuntimeError):
     def __init__(self, stage: str, message: str):
         super().__init__(f"{stage}: {message}")
         self.stage = stage
+
+
+class InputBlockedError(PipelineError):
+    """The input guardrail blocked the request. Nothing else ran."""
+
+    def __init__(self, check: InputCheck, run_id: str):
+        super().__init__("input_guardrail", f"blocked ({check.category}): {check.reason}")
+        self.check = check
+        self.run_id = run_id
 
 
 @dataclass
@@ -72,6 +85,11 @@ class RunResult:
     critic: LoopResult | None = None
     stage_log: list[dict] = field(default_factory=list)
     ctx: AppContext | None = None
+    status: str = "draft"                      # completed | paused_for_review | rejected_by_guardrail
+    input_check: InputCheck | None = None
+    output_check: OutputCheck | None = None
+    gate_reasons: list[str] = field(default_factory=list)
+    final_markdown: str | None = None          # only set when status == "completed"
 
 
 def _emit(ctx: AppContext, on_event: EventCallback | None, stage: str, **data: Any) -> None:
@@ -112,15 +130,20 @@ def _writer_prompt(ctx: AppContext, plan: ResearchPlan, analysis: EvidenceAnalys
     )
 
 
-DemoFault = str  # "unsupported_claim": plant a claim the evidence does not support (demo scenario 6)
+# Demo faults (test mode):
+#   "unsupported_claim"  before the Critic: a real citation for a claim it does not support (scenario 6)
+#   "fake_citation"      after the Critic: a finding citing an evidence id that does not exist (scenario 9)
+#   "tampered_quote"     after the Critic: a cited quote altered in the store after verification (scenario 9)
+DemoFault = str
+DEMO_FAULTS = ("unsupported_claim", "fake_citation", "tampered_quote")
 
 
 async def run_research(question: str, *, settings: Settings | None = None, store: Store | None = None,
                        run_agent: RunAgent | None = None, on_event: EventCallback | None = None,
                        demo_fault: DemoFault | None = None) -> RunResult:
     question = (question or "").strip()
-    if len(question) < 10:
-        raise PipelineError("input", "question is too short")
+    if demo_fault and demo_fault not in DEMO_FAULTS:
+        raise PipelineError("input", f"unknown demo fault {demo_fault!r}")
     settings = settings or load_settings()
     store = store or Store(settings.db_path)
     run_agent = run_agent or default_run_agent
@@ -128,9 +151,22 @@ async def run_research(question: str, *, settings: Settings | None = None, store
 
     with trace("Research run", group_id=ctx.run_id,
                metadata={"run_id": ctx.run_id, "question": question[:200]}):
-        # 1. CODE-ORCHESTRATED routing
+        # 0. Input guardrail: regex pre-filter (code) → Guard Agent (LLM) → decision (code)
+        with guardrail_span("Input guardrail") as span:
+            check = await check_input(question, lambda prompt: run_agent(_guard(), prompt, ctx, 1))
+            span.span_data.triggered = not check.allowed
+        ctx.input_check = check
+        _emit(ctx, on_event, "input_checked", **check.summary())
+        if not check.allowed:
+            store.update_run(ctx.run_id, status="blocked", state={"input_check": check.summary()})
+            raise InputBlockedError(check, ctx.run_id)
+        if check.requires_review:
+            ctx.flag_review(check.reason)
+
+        # 1. CODE-ORCHESTRATED routing (keywords + the Guard's domain)
         with custom_span("Router (code)"):
-            route = route_question(question, sensitive_domains=settings.sensitive_domains)
+            route = route_question(question, guard_domain=check.domain,
+                                   sensitive_domains=settings.sensitive_domains)
             if route.requires_review:
                 ctx.flag_review(route.reason)
         _emit(ctx, on_event, "routed", path=route.path, domains=route.domains, matched=route.matched_terms)
@@ -210,6 +246,10 @@ async def run_research(question: str, *, settings: Settings | None = None, store
             ctx.flag_review(f"Critic FAIL after {len(loop.rounds)} round(s) ({loop.stop_reason})")
         _emit(ctx, on_event, "critic_done", verdict=loop.verdict, rounds=len(loop.rounds),
               stop_reason=loop.stop_reason, best_round=loop.best_round)
+        if demo_fault in ("fake_citation", "tampered_quote"):  # after the Critic: only the output guardrail is left
+            report, planted = (plant_fake_citation(report) if demo_fault == "fake_citation"
+                               else tamper_cited_quote(ctx, report))
+            _emit(ctx, on_event, "fault_planted", kind=demo_fault, statement=planted)
         invalid = _invalid_citations(ctx, report)
         ctx.final_report = report
 
@@ -218,17 +258,46 @@ async def run_research(question: str, *, settings: Settings | None = None, store
         _emit(ctx, on_event, "checked", invalid_citations=invalid, confidence=confidence)
 
         draft = (f"> **DRAFT** — Critic verdict **{loop.verdict}** after {len(loop.rounds)} round(s) "
-                 f"({loop.stop_reason}). Output guardrail and human review are not applied yet.\n\n"
-                 + render_markdown(ctx))
-        store.update_run(ctx.run_id, status="reviewed" if loop.verdict == "PASS" else "critic_failed",
-                         state={"finished_at": time.time(), "critic_verdict": loop.verdict,
-                                "critic_rounds": len(loop.rounds)})
+                 f"({loop.stop_reason}).\n\n" + render_markdown(ctx))
+
+        # 8. Release: output guardrail → token → impact gate → review queue or final report (all code)
+        save_run_state(ctx, plan=plan, analysis=analysis, workers=workers, confidence=confidence,
+                       extra={"critic_verdict": loop.verdict, "critic_rounds": len(loop.rounds),
+                              "critic_stop_reason": loop.stop_reason, "route": route.path})
+        release = release_report(ctx, workers, confidence,
+                                 on_event=lambda stage, data: _emit(ctx, on_event, stage, **data))
+        save_run_state(ctx, plan=plan, analysis=analysis, workers=workers, confidence=confidence,
+                       release=release)
 
     return RunResult(
         run_id=ctx.run_id, question=question, route=route, plan=plan, decision=decision, assignment=assignment,
         workers=workers, timeline=tl, analysis=analysis, report=report, invalid_citations=invalid,
         confidence=confidence, draft_markdown=draft, critic=loop, stage_log=ctx.stage_log, ctx=ctx,
+        status=release.status, input_check=check, output_check=release.output_check,
+        gate_reasons=release.gate_reasons, final_markdown=release.final_markdown,
     )
+
+
+def save_run_state(ctx: AppContext, *, plan: ResearchPlan, analysis: EvidenceAnalysis,
+                   workers: list[WorkerFindings], confidence: dict, release: Release | None = None,
+                   extra: dict | None = None) -> None:
+    """Everything resume needs, persisted with the run. Evidence and sources are already in the store.
+
+    The approval token is never persisted: a resumed run must pass the output guardrail again.
+    """
+    row = ctx.store.get_run(ctx.run_id)
+    state = json.loads(row["state_json"]) if row and row["state_json"] else {}
+    state.update(extra or {})
+    state.update({
+        "plan": plan.model_dump(), "analysis": analysis.model_dump(),
+        "workers": [w.model_dump() for w in workers], "report": ctx.final_report.model_dump() if ctx.final_report else None,
+        "confidence": confidence, "review_reasons": ctx.review_reasons, "updated_at": time.time(),
+        "input_check": ctx.input_check.summary() if ctx.input_check else None,
+    })
+    if release is not None:
+        state.update({"release_status": release.status, "output_check": release.output_check.summary(),
+                      "gate_reasons": release.gate_reasons, "final_markdown": release.final_markdown})
+    ctx.store.update_run(ctx.run_id, state=state)
 
 
 PLANTED_STATEMENT = ("Self-hosting an open-source model is always cheaper than cloud APIs, "
@@ -249,6 +318,25 @@ def plant_unsupported_claim(ctx: AppContext, report: ResearchReport) -> tuple[Re
     return report.model_copy(update={"findings": list(report.findings) + [planted]}), PLANTED_STATEMENT
 
 
+FAKE_CITATION_STATEMENT = "An independent 2026 audit found hosted APIs cut total costs by 70% for every team size."
+
+
+def plant_fake_citation(report: ResearchReport) -> tuple[ResearchReport, str]:
+    """Demo scenario 9: after the Critic, add a finding citing an evidence id that does not exist."""
+    from ..models import Finding
+    fake = Finding(statement=FAKE_CITATION_STATEMENT, evidence_ids=["ev999"], strength="strong")
+    return report.model_copy(update={"findings": list(report.findings) + [fake]}), FAKE_CITATION_STATEMENT
+
+
+def tamper_cited_quote(ctx: AppContext, report: ResearchReport) -> tuple[ResearchReport, str]:
+    """Demo scenario 9b: after the Critic, alter a cited quote in the store (as a bug or tampering would).
+    The id still exists and is marked verified; only re-checking the quote against the page catches it."""
+    eid = report.findings[0].evidence_ids[0]
+    ctx.store._exec("UPDATE evidence SET quote = quote || ' Hosted APIs are 90% cheaper in all cases.' "
+                    "WHERE run_id=? AND id=?", (ctx.run_id, eid))
+    return report, f"quote of {eid} altered after verification"
+
+
 def _invalid_citations(ctx: AppContext, report: ResearchReport) -> list[dict]:
     out = []
     for eid in sorted(report.cited_evidence_ids()):
@@ -259,6 +347,11 @@ def _invalid_citations(ctx: AppContext, report: ResearchReport) -> list[dict]:
 
 
 # Indirection so tests can run the pipeline without building real agents.
+def _guard() -> Agent:
+    from ..agents.guard import guard
+    return guard()
+
+
 def _planner() -> Agent:
     from ..agents.planner import planner
     return planner()
