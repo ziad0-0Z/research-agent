@@ -8,9 +8,10 @@
       → [LLM×N] specialists in parallel tools: search → scrape → extract → save   (parallelization)
       → [LLM]   Evidence Analyst        agreements / contradictions     (chain step 2)
       → [LLM]   Writer                  ResearchReport                  (chain step 3)
-      → [CODE]  citation check + confidence
+      → [LOOP]  Writer ⇄ Critic         code checks + RAG + LLM review, verdict in code (evaluator-optimizer)
+      → [CODE]  confidence
 
-Phase 4 adds the Writer ⇄ Critic loop, Phase 5 the guardrails and human-review gate.
+Phase 5 adds the guardrails and human-review gate.
 Every stage runs inside one trace with named spans, and is logged to ctx.stage_log.
 """
 from __future__ import annotations
@@ -34,6 +35,7 @@ from ..tools.evidence import check_citation
 from ..tools.review import render_markdown
 from ..tools.web import ToolError
 from .confidence import compute_confidence
+from .eval_loop import LoopResult, writer_critic_loop
 from .parallel import WorkerTask, run_parallel, timeline
 from .router import AssignmentPlan, RouteDecision, route_question, validate_assignments
 
@@ -67,6 +69,7 @@ class RunResult:
     invalid_citations: list[dict]
     confidence: dict
     draft_markdown: str
+    critic: LoopResult | None = None
     stage_log: list[dict] = field(default_factory=list)
     ctx: AppContext | None = None
 
@@ -109,8 +112,12 @@ def _writer_prompt(ctx: AppContext, plan: ResearchPlan, analysis: EvidenceAnalys
     )
 
 
+DemoFault = str  # "unsupported_claim": plant a claim the evidence does not support (demo scenario 6)
+
+
 async def run_research(question: str, *, settings: Settings | None = None, store: Store | None = None,
-                       run_agent: RunAgent | None = None, on_event: EventCallback | None = None) -> RunResult:
+                       run_agent: RunAgent | None = None, on_event: EventCallback | None = None,
+                       demo_fault: DemoFault | None = None) -> RunResult:
     question = (question or "").strip()
     if len(question) < 10:
         raise PipelineError("input", "question is too short")
@@ -186,43 +193,60 @@ async def run_research(question: str, *, settings: Settings | None = None, store
             raise PipelineError("writer", f"{type(exc).__name__}: {exc}") from exc
         _emit(ctx, on_event, "drafted", findings=len(report.findings), impact=report.impact)
 
-        # 7. CODE checks: every cited id must exist. One bounded repair round if not
-        #    (Phase 4's Critic loop then checks support, not just existence).
-        with custom_span("Citation check (code)"):
-            invalid = _invalid_citations(ctx, report)
-        for attempt in range(1, MAX_CITATION_REPAIRS + 1):
-            if not invalid:
-                break
-            bad = ", ".join(i["evidence_id"] for i in invalid)
-            repair_prompt = (writer_prompt + "\n\nRevision instructions:\n"
-                             f"- These cited ids do not exist: {bad}. Replace each with the correct id from "
-                             "\"Valid evidence ids\", or remove the citation (and the finding, if nothing supports it).")
-            try:
-                repaired: ResearchReport = await run_agent(_writer(), repair_prompt, ctx, 2)
-            except Exception as exc:  # keep the first draft; its bad ids stay flagged
-                _emit(ctx, on_event, "citations_repair_failed", error=f"{type(exc).__name__}: {exc}")
-                break
-            new_invalid = _invalid_citations(ctx, repaired)
-            _emit(ctx, on_event, "citations_repaired", attempt=attempt, before=len(invalid), after=len(new_invalid))
-            if len(new_invalid) < len(invalid):
-                report, invalid = repaired, new_invalid
+        if demo_fault == "unsupported_claim":
+            report, planted = plant_unsupported_claim(ctx, report)
+            _emit(ctx, on_event, "fault_planted", kind=demo_fault, statement=planted)
+
+        # 7. Evaluator-optimizer: Writer ⇄ Critic (bounded; verdict decided in code).
+        with custom_span("Writer ⇄ Critic loop", data={"max_rounds": settings.max_critic_rounds}):
+            loop = await writer_critic_loop(
+                ctx, plan, analysis, workers, writer_prompt, report,
+                run_writer=lambda agent, prompt: run_agent(agent, prompt, ctx, 2),
+                run_critic=lambda agent, prompt: run_agent(agent, prompt, ctx, 2),
+                writer_agent=_writer, critic_agent=_critic, max_rounds=settings.max_critic_rounds,
+                on_event=lambda stage, data: _emit(ctx, on_event, stage, **data))
+        report = loop.report
+        if loop.verdict == "FAIL":
+            ctx.flag_review(f"Critic FAIL after {len(loop.rounds)} round(s) ({loop.stop_reason})")
+        _emit(ctx, on_event, "critic_done", verdict=loop.verdict, rounds=len(loop.rounds),
+              stop_reason=loop.stop_reason, best_round=loop.best_round)
+        invalid = _invalid_citations(ctx, report)
         ctx.final_report = report
 
         with custom_span("Confidence (code)"):
             confidence = compute_confidence(ctx, plan, report, workers)
         _emit(ctx, on_event, "checked", invalid_citations=invalid, confidence=confidence)
 
-        draft = "> **DRAFT** — not yet reviewed by the Critic or the output guardrail.\n\n" + render_markdown(ctx)
-        store.update_run(ctx.run_id, status="drafted", state={"finished_at": time.time()})
+        draft = (f"> **DRAFT** — Critic verdict **{loop.verdict}** after {len(loop.rounds)} round(s) "
+                 f"({loop.stop_reason}). Output guardrail and human review are not applied yet.\n\n"
+                 + render_markdown(ctx))
+        store.update_run(ctx.run_id, status="reviewed" if loop.verdict == "PASS" else "critic_failed",
+                         state={"finished_at": time.time(), "critic_verdict": loop.verdict,
+                                "critic_rounds": len(loop.rounds)})
 
     return RunResult(
         run_id=ctx.run_id, question=question, route=route, plan=plan, decision=decision, assignment=assignment,
         workers=workers, timeline=tl, analysis=analysis, report=report, invalid_citations=invalid,
-        confidence=confidence, draft_markdown=draft, stage_log=ctx.stage_log, ctx=ctx,
+        confidence=confidence, draft_markdown=draft, critic=loop, stage_log=ctx.stage_log, ctx=ctx,
     )
 
 
-MAX_CITATION_REPAIRS = 1
+PLANTED_STATEMENT = ("Self-hosting an open-source model is always cheaper than cloud APIs, "
+                     "for any team size and any usage volume.")
+
+
+def plant_unsupported_claim(ctx: AppContext, report: ResearchReport) -> tuple[ResearchReport, str]:
+    """Demo scenario 6: add a finding the cited evidence does not support, so the Critic must catch it.
+
+    It cites a real, verified evidence id (so the citation check passes): only the support check can
+    catch it. Prefers evidence that says the opposite (hosted APIs cheaper for small teams).
+    """
+    from ..models import Finding
+    items = ctx.store.list_evidence(ctx.run_id)
+    opposite = [e for e in items if any(w in e.quote.lower() for w in ("lower tco", "cheapest", "hosted apis had"))]
+    target = (opposite or items)[0]
+    planted = Finding(statement=PLANTED_STATEMENT, evidence_ids=[target.id], strength="strong")
+    return report.model_copy(update={"findings": list(report.findings) + [planted]}), PLANTED_STATEMENT
 
 
 def _invalid_citations(ctx: AppContext, report: ResearchReport) -> list[dict]:
@@ -253,3 +277,8 @@ def _researcher(kind: str, depth: str) -> Agent:
 def _writer() -> Agent:
     from ..agents.writer import writer
     return writer()
+
+
+def _critic() -> Agent:
+    from ..agents.critic import critic
+    return critic()

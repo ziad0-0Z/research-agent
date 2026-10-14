@@ -1,10 +1,11 @@
-"""Run the full research pipeline (Phases 2-3) from the command line.
+"""Run the full research pipeline (Phases 2-4) from the command line.
 
     python scripts/run_research.py                       # primary demo question, offline corpus
     python scripts/run_research.py --question secondary   # pgvector vs vector DB
     python scripts/run_research.py --question sensitive   # bank question -> review path
     python scripts/run_research.py --question "Your own question?"
     python scripts/run_research.py --live-search          # Tavily -> DuckDuckGo -> offline
+    python scripts/run_research.py --plant-fault          # demo 6: plant an unsupported claim for the Critic
 
 The draft report is saved to samples/<run_id>.md.
 """
@@ -69,10 +70,24 @@ def on_event(stage: str, data: dict) -> None:
         print(f"{t} ⚠️  Evidence analysis failed, continuing without it: {data['error']}")
     elif stage == "drafted":
         print(f"{t} 🤖 Writer: {data['findings']} findings, impact={data['impact']}")
-    elif stage == "citations_repaired":
-        print(f"{t} 🔁 Writer repair (code-triggered): invalid citations {data['before']} → {data['after']}")
-    elif stage == "citations_repair_failed":
-        print(f"{t} ⚠️  Citation repair failed, keeping first draft: {data['error']}")
+    elif stage == "fault_planted":
+        print(f"{t} 🧪 Planted unsupported claim (demo): \"{data['statement']}\"")
+    elif stage == "critic_round":
+        icon = {"PASS": "✅", "REVISE": "🔁", "FAIL": "❌"}[data["verdict"]]
+        print(f"{t} {icon} Critic round {data['round']}: {data['verdict']} — {data['blocking']} blocking, "
+              f"{data['advisory']} advisory | judged {data['judged']}, reused {data['reused']} | "
+              f"retrieval: {data['retrieval']}")
+        for issue in data["issues"]:
+            print(f"           {issue[:150]}")
+        for fix in data["autofixes"]:
+            print(f"           🐍 auto-fix: {fix}")
+    elif stage == "revised":
+        print(f"{t} 🤖 Writer revision {data['round']}: {data['findings']} findings")
+    elif stage == "revision_failed":
+        print(f"{t} ⚠️  Writer revision failed, keeping the best draft: {data['error']}")
+    elif stage == "critic_done":
+        print(f"{t} 🐍 Critic loop: {data['verdict']} after {data['rounds']} round(s) ({data['stop_reason']}), "
+              f"kept draft from round {data['best_round']}")
     elif stage == "checked":
         print(f"{t} 🐍 Checks: confidence {data['confidence']['score']} | invalid citations: "
               f"{len(data['invalid_citations'])}")
@@ -116,13 +131,15 @@ def save(result: RunResult) -> Path:
         "workers": [w.model_dump() for w in result.workers], "timeline": result.timeline,
         "analysis": result.analysis.model_dump(), "report": result.report.model_dump(),
         "invalid_citations": result.invalid_citations, "confidence": result.confidence,
+        "critic": {"verdict": result.critic.verdict, "stop_reason": result.critic.stop_reason,
+                   "best_round": result.critic.best_round, "rounds": result.critic.history} if result.critic else None,
         "tool_calls": [{"tool": r.tool, "ok": r.ok, "summary": r.summary} for r in result.ctx.tool_log],
     }
     (out_dir / f"{result.run_id}.json").write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
     return md
 
 
-async def main(question: str, live_search: bool) -> int:
+async def main(question: str, live_search: bool, plant_fault: bool = False) -> int:
     try:
         settings = load_settings()
         settings.require_llm_key()
@@ -139,7 +156,8 @@ async def main(question: str, live_search: bool) -> int:
     print(f"Model: {settings.llm_provider}/{settings.model_name} (fallback: {fallbacks}) | "
           f"search: {settings.search_mode} | rate limit: {settings.llm_requests_per_minute}/min\n")
     try:
-        result = await run_research(question, settings=settings, store=Store(settings.db_path), on_event=on_event)
+        result = await run_research(question, settings=settings, store=Store(settings.db_path), on_event=on_event,
+                                    demo_fault="unsupported_claim" if plant_fault else None)
     except PipelineError as exc:
         print(f"\n❌ Pipeline stopped at stage '{exc.stage}': {exc}")
         print_model_usage()
@@ -163,15 +181,15 @@ async def main(question: str, live_search: bool) -> int:
         for c in result.analysis.contradictions:
             print(f"  ⚡ {c.topic}: {c.evidence_ids_a} vs {c.evidence_ids_b} — {c.explanation[:110]}")
     if result.invalid_citations:
-        print("\n⚠️  Invalid citations (the Phase 5 output guardrail will reject these):")
+        print("\n⚠️  Invalid citations left after the Critic loop (the Phase 5 output guardrail will reject these):")
         for ic in result.invalid_citations:
             print(f"  {ic['evidence_id']}: {ic['reason']}")
     c = result.confidence
     print(f"\nConfidence {c['score']} = coverage {c['coverage']} × quality {c['source_quality']} × "
           f"(1 − {c['contradiction_penalty']}) × workers {c['worker_factor']}")
     print(f"  {c['explanation']}")
-    if result.route.requires_review:
-        print(f"\n⏸️  Review required: {result.route.reason} (enforced from Phase 5)")
+    if result.ctx.requires_review:
+        print(f"\n⏸️  Review required: {'; '.join(result.ctx.review_reasons)} (enforced from Phase 5)")
 
     r = result.report
     print(f"\n{'=' * 70}\n{r.title}\n{'=' * 70}\n{r.executive_summary}\n")
@@ -185,6 +203,11 @@ async def main(question: str, live_search: bool) -> int:
     print("\nTool calls (ok / rejected): " + ", ".join(f"{k} {v[0]}/{v[1]}" for k, v in by_tool.items()))
     print_model_usage()
     print(f"Total time {time.time() - T0:.0f}s")
+    from research_agent.rag import get_embedder
+    emb = get_embedder(settings)
+    if emb.events:
+        print(f"Embeddings: {len(emb.events)} provider failure(s), last: {emb.events[-1]['provider']} — "
+              f"{emb.events[-1]['error'][:90]}")
     print(f"Draft report saved: {save(result).relative_to(ROOT)}")
     return 0
 
@@ -194,6 +217,8 @@ if __name__ == "__main__":
     parser.add_argument("--question", default="primary",
                         help="primary | secondary | sensitive | risk | or your own question in quotes")
     parser.add_argument("--live-search", action="store_true")
+    parser.add_argument("--plant-fault", action="store_true",
+                        help="demo scenario 6: add an unsupported claim to the first draft")
     args = parser.parse_args()
     q = QUESTIONS.get(args.question, args.question)
-    raise SystemExit(asyncio.run(main(q, args.live_search)))
+    raise SystemExit(asyncio.run(main(q, args.live_search, args.plant_fault)))

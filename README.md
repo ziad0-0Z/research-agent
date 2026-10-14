@@ -9,7 +9,7 @@ Agentic AI Final Project — Project 3.
 | [`docs/REQUIREMENTS_MATRIX.md`](docs/REQUIREMENTS_MATRIX.md) | Every brief requirement → code → test → demo scenario |
 | [`eval/METRICS.md`](eval/METRICS.md) | Metric definitions and test sets |
 
-> Status: **Phases 2–3 (research pipeline + orchestration)** — code router, Planner, LLM Orchestrator, 3 parallel specialists, Evidence Analyst, Writer, computed confidence.
+> Status: **Phase 4 (Writer ⇄ Critic + hybrid RAG)** — code router, Planner, LLM Orchestrator, 3 parallel specialists, Evidence Analyst, Writer, Critic loop (verdict decided in code), hybrid BM25 + embedding retrieval, computed confidence.
 
 ## Setup (Windows, cmd)
 
@@ -67,7 +67,25 @@ python scripts\latency_check.py --models gemini-3.5-flash-lite gemini-3.1-flash-
 
 Times one call per setting (reasoning off / none / low). Pick the fastest working one for `.env`.
 
-### Full research run (Phases 2–3)
+### Embeddings for hybrid retrieval (RAG bonus)
+
+Install Ollama from ollama.com, then:
+
+```bat
+ollama pull bge-m3
+ollama list
+```
+
+`EMBED_MODE=auto` tries Ollama `bge-m3` (local, no quota) → Gemini embeddings API → BM25 only.
+Retrieval never fails for lack of embeddings; it reports which method ran (`hybrid` or `bm25`).
+
+```bat
+python eval\retrieval_eval.py
+```
+
+Prints recall@5 for BM25-only and hybrid over the corpus, with every miss listed.
+
+### Full research run (Phases 2–4)
 
 ```bat
 python scripts\run_research.py
@@ -75,9 +93,14 @@ python scripts\run_research.py --question secondary
 python scripts\run_research.py --question sensitive
 python scripts\run_research.py --question risk
 python scripts\run_research.py --question "Your own question?"
+python scripts\run_research.py --plant-fault
 ```
 
-Draft reports are saved to `samples/<run_id>.md` (+ a `.json` with the plan, workers, timeline and tool calls).
+`--plant-fault` is demo scenario 6: an unsupported claim is added to the first draft, citing a real
+quote that says the opposite. The Critic must flag it (REVISE) and the Writer must remove or fix it.
+
+Draft reports are saved to `samples/<run_id>.md` (+ a `.json` with the plan, workers, timeline,
+Critic rounds and tool calls).
 
 ## Layout so far
 
@@ -92,11 +115,14 @@ src/research_agent/
   guardrails/  url_safety.py (SSRF/local file blocking), injection.py (detect, sanitize, wrap)
   tools/       corpus, web (search/validate/scrape), quotes, quality, evidence, analysis, review,
                registry.py (the 11 function tools)
-  agents/      planner, orchestrator, researchers (factory: technical/market/risk), writer,
+  agents/      planner, orchestrator, researchers (factory: technical/market/risk), writer, critic,
                tool_agents (claim extractor, evidence analyst, support judge)
+  rag/         embeddings.py (Ollama → Gemini → none, vector cache), hybrid.py (BM25 + dense, RRF)
   workflows/   router.py (code routing), parallel.py (timeouts, isolation, timeline),
-               confidence.py (computed confidence), pipeline.py (the full chain)
+               eval_loop.py (Writer ⇄ Critic), confidence.py (computed confidence), pipeline.py
 data/corpus/   15 synthetic test pages (see its README)
+data/golden/   retrieval.json (recall@5 test set)
+eval/          METRICS.md, retrieval_eval.py
 scripts/       smoke_test.py, check_models.py, phase1_check.py, run_research.py
 tests/
 ```

@@ -80,6 +80,10 @@ class Settings:
     # Models tried in order when the main model is overloaded (503), rate-limited (429) or times out.
     llm_fallbacks: tuple[tuple[str, str], ...] = ()
     llm_fallback_cooldown_seconds: int = 60
+    # Embeddings for hybrid retrieval (RAG bonus). auto = Ollama → Gemini → BM25-only.
+    embed_mode: str = "auto"  # auto | ollama | gemini | off
+    gemini_embed_model: str = "gemini-embedding-001"
+    embed_timeout_seconds: int = 30
 
     # ---- derived helpers ----
     @property
@@ -116,6 +120,10 @@ class Settings:
     @property
     def llm_cache_dir(self) -> Path:
         return self.data_dir / "cache" / "llm"
+
+    @property
+    def embed_cache_path(self) -> Path:
+        return self.data_dir / "cache" / "embeddings.db"
 
     def require_llm_key(self) -> None:
         if self.llm_mode == "replay":
@@ -186,4 +194,8 @@ def load_settings() -> Settings:
             os.getenv("GEMINI_API_KEY", "").strip(), os.getenv("GROQ_API_KEY", "").strip(),
         ),
         llm_fallback_cooldown_seconds=_int("LLM_FALLBACK_COOLDOWN_SECONDS", 60, minimum=0),
+        max_critic_rounds=_int("MAX_CRITIC_ROUNDS", 3),
+        embed_mode=_choice("EMBED_MODE", "auto", ("auto", "ollama", "gemini", "off")),
+        gemini_embed_model=os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001").strip(),
+        embed_timeout_seconds=_int("EMBED_TIMEOUT_SECONDS", 30),
     )

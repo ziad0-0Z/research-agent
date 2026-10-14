@@ -1,0 +1,544 @@
+[
+  {
+    "method": "bm25",
+    "embed_provider": null,
+    "k": 5,
+    "chunks": 64,
+    "recall_at_5": 0.909,
+    "found": 20,
+    "relevant": 22,
+    "recall_paraphrase": 0.929,
+    "recall_literal": 0.875,
+    "rows": [
+      {
+        "id": "r01",
+        "query": "Hosted model APIs are the cheapest option for startups at low usage",
+        "paraphrase": false,
+        "found": [
+          "p01_api_pricing.md"
+        ],
+        "missed": [
+          "p03_tco_small_teams.md"
+        ],
+        "top": [
+          "p01_api_pricing.md",
+          "p07_api_data_retention.md",
+          "p08_vendor_lockin.md"
+        ]
+      },
+      {
+        "id": "r02",
+        "query": "Renting a GPU around the clock costs over a thousand dollars a month",
+        "paraphrase": false,
+        "found": [
+          "p02_gpu_rental_costs.md"
+        ],
+        "missed": [],
+        "top": [
+          "p02_gpu_rental_costs.md",
+          "p14_dedicated_vector_db.md",
+          "p06_latency.md",
+          "p04_self_hosting_always_cheaper.md"
+        ]
+      },
+      {
+        "id": "r03",
+        "query": "Running your own model needs part of an engineer's time to keep it working",
+        "paraphrase": true,
+        "found": [
+          "p03_tco_small_teams.md"
+        ],
+        "missed": [
+          "p09_selfhosting_postmortems.md"
+        ],
+        "top": [
+          "p07_api_data_retention.md",
+          "p08_vendor_lockin.md",
+          "p03_tco_small_teams.md",
+          "p14_dedicated_vector_db.md",
+          "p15_selfhosting_security.md"
+        ]
+      },
+      {
+        "id": "r04",
+        "query": "At what monthly volume does operating your own inference become cheaper",
+        "paraphrase": true,
+        "found": [
+          "p02_gpu_rental_costs.md",
+          "p03_tco_small_teams.md"
+        ],
+        "missed": [],
+        "top": [
+          "p04_self_hosting_always_cheaper.md",
+          "p02_gpu_rental_costs.md",
+          "p03_tco_small_teams.md",
+          "p15_selfhosting_security.md",
+          "p07_api_data_retention.md"
+        ]
+      },
+      {
+        "id": "r05",
+        "query": "Open-weight models are nearly as good as frontier APIs for summarisation and RAG",
+        "paraphrase": false,
+        "found": [
+          "p05_open_model_benchmarks.md"
+        ],
+        "missed": [],
+        "top": [
+          "p05_open_model_benchmarks.md"
+        ]
+      },
+      {
+        "id": "r06",
+        "query": "Free models fall behind on hard reasoning and writing code",
+        "paraphrase": true,
+        "found": [
+          "p05_open_model_benchmarks.md"
+        ],
+        "missed": [],
+        "top": [
+          "p05_open_model_benchmarks.md",
+          "p15_selfhosting_security.md",
+          "p07_api_data_retention.md",
+          "p08_vendor_lockin.md"
+        ]
+      },
+      {
+        "id": "r07",
+        "query": "A dedicated GPU answers faster and more predictably than shared endpoints",
+        "paraphrase": true,
+        "found": [
+          "p06_latency.md"
+        ],
+        "missed": [],
+        "top": [
+          "p06_latency.md",
+          "p15_selfhosting_security.md"
+        ]
+      },
+      {
+        "id": "r08",
+        "query": "Providers keep prompts for about a month to detect abuse",
+        "paraphrase": true,
+        "found": [
+          "p07_api_data_retention.md"
+        ],
+        "missed": [],
+        "top": [
+          "p07_api_data_retention.md",
+          "p15_selfhosting_security.md",
+          "p10_hidden_api_costs.md"
+        ]
+      },
+      {
+        "id": "r09",
+        "query": "Vendors retiring model versions forced teams to redo their prompts",
+        "paraphrase": true,
+        "found": [
+          "p08_vendor_lockin.md"
+        ],
+        "missed": [],
+        "top": [
+          "p08_vendor_lockin.md",
+          "p07_api_data_retention.md",
+          "p15_selfhosting_security.md"
+        ]
+      },
+      {
+        "id": "r10",
+        "query": "A driver update took the self-hosted bot offline for hours",
+        "paraphrase": false,
+        "found": [
+          "p09_selfhosting_postmortems.md"
+        ],
+        "missed": [],
+        "top": [
+          "p09_selfhosting_postmortems.md",
+          "p15_selfhosting_security.md"
+        ]
+      },
+      {
+        "id": "r11",
+        "query": "Long system prompts and retrieved context inflate the bill on every request",
+        "paraphrase": false,
+        "found": [
+          "p10_hidden_api_costs.md"
+        ],
+        "missed": [],
+        "top": [
+          "p10_hidden_api_costs.md",
+          "p05_open_model_benchmarks.md",
+          "p15_selfhosting_security.md"
+        ]
+      },
+      {
+        "id": "r12",
+        "query": "Caching and shorter answers cut API spending by about a third",
+        "paraphrase": true,
+        "found": [
+          "p10_hidden_api_costs.md"
+        ],
+        "missed": [],
+        "top": [
+          "p10_hidden_api_costs.md",
+          "p12_financial_data_compliance.md",
+          "p07_api_data_retention.md"
+        ]
+      },
+      {
+        "id": "r13",
+        "query": "Banks stay accountable for customer data even when an outside AI service processes it",
+        "paraphrase": true,
+        "found": [
+          "p12_financial_data_compliance.md"
+        ],
+        "missed": [],
+        "top": [
+          "p12_financial_data_compliance.md",
+          "p07_api_data_retention.md"
+        ]
+      },
+      {
+        "id": "r14",
+        "query": "pgvector is fast enough below ten million vectors",
+        "paraphrase": false,
+        "found": [
+          "p13_pgvector_performance.md"
+        ],
+        "missed": [],
+        "top": [
+          "p13_pgvector_performance.md",
+          "p03_tco_small_teams.md"
+        ]
+      },
+      {
+        "id": "r15",
+        "query": "Specialised similarity-search databases scale to hundreds of millions of embeddings",
+        "paraphrase": true,
+        "found": [
+          "p14_dedicated_vector_db.md"
+        ],
+        "missed": [],
+        "top": [
+          "p14_dedicated_vector_db.md",
+          "p01_api_pricing.md",
+          "p06_latency.md"
+        ]
+      },
+      {
+        "id": "r16",
+        "query": "Downloaded weights should be checked against checksums because they can be tampered with",
+        "paraphrase": false,
+        "found": [
+          "p15_selfhosting_security.md"
+        ],
+        "missed": [],
+        "top": [
+          "p15_selfhosting_security.md",
+          "p05_open_model_benchmarks.md"
+        ]
+      },
+      {
+        "id": "r17",
+        "query": "Unprotected inference servers exposed on the internet can be abused by anyone",
+        "paraphrase": true,
+        "found": [
+          "p15_selfhosting_security.md"
+        ],
+        "missed": [],
+        "top": [
+          "p15_selfhosting_security.md",
+          "p05_open_model_benchmarks.md",
+          "p03_tco_small_teams.md",
+          "p01_api_pricing.md"
+        ]
+      },
+      {
+        "id": "r18",
+        "query": "Keeping a thin layer between the product and the provider makes switching models easier",
+        "paraphrase": true,
+        "found": [
+          "p08_vendor_lockin.md",
+          "p03_tco_small_teams.md"
+        ],
+        "missed": [],
+        "top": [
+          "p08_vendor_lockin.md",
+          "p03_tco_small_teams.md",
+          "p15_selfhosting_security.md",
+          "p05_open_model_benchmarks.md"
+        ]
+      }
+    ]
+  },
+  {
+    "method": "hybrid",
+    "embed_provider": "ollama/bge-m3",
+    "k": 5,
+    "chunks": 64,
+    "recall_at_5": 0.909,
+    "found": 20,
+    "relevant": 22,
+    "recall_paraphrase": 0.857,
+    "recall_literal": 1.0,
+    "rows": [
+      {
+        "id": "r01",
+        "query": "Hosted model APIs are the cheapest option for startups at low usage",
+        "paraphrase": false,
+        "found": [
+          "p01_api_pricing.md",
+          "p03_tco_small_teams.md"
+        ],
+        "missed": [],
+        "top": [
+          "p01_api_pricing.md",
+          "p03_tco_small_teams.md",
+          "p11_hosting_marketing.md"
+        ]
+      },
+      {
+        "id": "r02",
+        "query": "Renting a GPU around the clock costs over a thousand dollars a month",
+        "paraphrase": false,
+        "found": [
+          "p02_gpu_rental_costs.md"
+        ],
+        "missed": [],
+        "top": [
+          "p02_gpu_rental_costs.md",
+          "p04_self_hosting_always_cheaper.md"
+        ]
+      },
+      {
+        "id": "r03",
+        "query": "Running your own model needs part of an engineer's time to keep it working",
+        "paraphrase": true,
+        "found": [
+          "p03_tco_small_teams.md"
+        ],
+        "missed": [
+          "p09_selfhosting_postmortems.md"
+        ],
+        "top": [
+          "p03_tco_small_teams.md",
+          "p07_api_data_retention.md",
+          "p08_vendor_lockin.md",
+          "p04_self_hosting_always_cheaper.md"
+        ]
+      },
+      {
+        "id": "r04",
+        "query": "At what monthly volume does operating your own inference become cheaper",
+        "paraphrase": true,
+        "found": [
+          "p02_gpu_rental_costs.md"
+        ],
+        "missed": [
+          "p03_tco_small_teams.md"
+        ],
+        "top": [
+          "p04_self_hosting_always_cheaper.md",
+          "p02_gpu_rental_costs.md",
+          "p01_api_pricing.md"
+        ]
+      },
+      {
+        "id": "r05",
+        "query": "Open-weight models are nearly as good as frontier APIs for summarisation and RAG",
+        "paraphrase": false,
+        "found": [
+          "p05_open_model_benchmarks.md"
+        ],
+        "missed": [],
+        "top": [
+          "p05_open_model_benchmarks.md"
+        ]
+      },
+      {
+        "id": "r06",
+        "query": "Free models fall behind on hard reasoning and writing code",
+        "paraphrase": true,
+        "found": [
+          "p05_open_model_benchmarks.md"
+        ],
+        "missed": [],
+        "top": [
+          "p05_open_model_benchmarks.md",
+          "p15_selfhosting_security.md",
+          "p08_vendor_lockin.md"
+        ]
+      },
+      {
+        "id": "r07",
+        "query": "A dedicated GPU answers faster and more predictably than shared endpoints",
+        "paraphrase": true,
+        "found": [
+          "p06_latency.md"
+        ],
+        "missed": [],
+        "top": [
+          "p06_latency.md"
+        ]
+      },
+      {
+        "id": "r08",
+        "query": "Providers keep prompts for about a month to detect abuse",
+        "paraphrase": true,
+        "found": [
+          "p07_api_data_retention.md"
+        ],
+        "missed": [],
+        "top": [
+          "p07_api_data_retention.md",
+          "p15_selfhosting_security.md",
+          "p10_hidden_api_costs.md",
+          "p01_api_pricing.md"
+        ]
+      },
+      {
+        "id": "r09",
+        "query": "Vendors retiring model versions forced teams to redo their prompts",
+        "paraphrase": true,
+        "found": [
+          "p08_vendor_lockin.md"
+        ],
+        "missed": [],
+        "top": [
+          "p08_vendor_lockin.md",
+          "p07_api_data_retention.md",
+          "p10_hidden_api_costs.md",
+          "p03_tco_small_teams.md"
+        ]
+      },
+      {
+        "id": "r10",
+        "query": "A driver update took the self-hosted bot offline for hours",
+        "paraphrase": false,
+        "found": [
+          "p09_selfhosting_postmortems.md"
+        ],
+        "missed": [],
+        "top": [
+          "p09_selfhosting_postmortems.md",
+          "p02_gpu_rental_costs.md",
+          "p06_latency.md"
+        ]
+      },
+      {
+        "id": "r11",
+        "query": "Long system prompts and retrieved context inflate the bill on every request",
+        "paraphrase": false,
+        "found": [
+          "p10_hidden_api_costs.md"
+        ],
+        "missed": [],
+        "top": [
+          "p10_hidden_api_costs.md",
+          "p04_self_hosting_always_cheaper.md",
+          "p09_selfhosting_postmortems.md",
+          "p02_gpu_rental_costs.md"
+        ]
+      },
+      {
+        "id": "r12",
+        "query": "Caching and shorter answers cut API spending by about a third",
+        "paraphrase": true,
+        "found": [
+          "p10_hidden_api_costs.md"
+        ],
+        "missed": [],
+        "top": [
+          "p10_hidden_api_costs.md",
+          "p06_latency.md",
+          "p01_api_pricing.md"
+        ]
+      },
+      {
+        "id": "r13",
+        "query": "Banks stay accountable for customer data even when an outside AI service processes it",
+        "paraphrase": true,
+        "found": [
+          "p12_financial_data_compliance.md"
+        ],
+        "missed": [],
+        "top": [
+          "p12_financial_data_compliance.md",
+          "p07_api_data_retention.md"
+        ]
+      },
+      {
+        "id": "r14",
+        "query": "pgvector is fast enough below ten million vectors",
+        "paraphrase": false,
+        "found": [
+          "p13_pgvector_performance.md"
+        ],
+        "missed": [],
+        "top": [
+          "p13_pgvector_performance.md",
+          "p02_gpu_rental_costs.md"
+        ]
+      },
+      {
+        "id": "r15",
+        "query": "Specialised similarity-search databases scale to hundreds of millions of embeddings",
+        "paraphrase": true,
+        "found": [
+          "p14_dedicated_vector_db.md"
+        ],
+        "missed": [],
+        "top": [
+          "p14_dedicated_vector_db.md",
+          "p06_latency.md",
+          "p01_api_pricing.md",
+          "p05_open_model_benchmarks.md",
+          "p13_pgvector_performance.md"
+        ]
+      },
+      {
+        "id": "r16",
+        "query": "Downloaded weights should be checked against checksums because they can be tampered with",
+        "paraphrase": false,
+        "found": [
+          "p15_selfhosting_security.md"
+        ],
+        "missed": [],
+        "top": [
+          "p15_selfhosting_security.md",
+          "p05_open_model_benchmarks.md",
+          "p08_vendor_lockin.md"
+        ]
+      },
+      {
+        "id": "r17",
+        "query": "Unprotected inference servers exposed on the internet can be abused by anyone",
+        "paraphrase": true,
+        "found": [
+          "p15_selfhosting_security.md"
+        ],
+        "missed": [],
+        "top": [
+          "p15_selfhosting_security.md",
+          "p02_gpu_rental_costs.md",
+          "p11_hosting_marketing.md"
+        ]
+      },
+      {
+        "id": "r18",
+        "query": "Keeping a thin layer between the product and the provider makes switching models easier",
+        "paraphrase": true,
+        "found": [
+          "p08_vendor_lockin.md",
+          "p03_tco_small_teams.md"
+        ],
+        "missed": [],
+        "top": [
+          "p08_vendor_lockin.md",
+          "p03_tco_small_teams.md",
+          "p05_open_model_benchmarks.md"
+        ]
+      }
+    ]
+  }
+]

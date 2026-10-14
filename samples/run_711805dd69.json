@@ -1,0 +1,619 @@
+{
+  "run_id": "run_711805dd69",
+  "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+  "route": {
+    "path": "standard",
+    "requires_review": false,
+    "domains": [],
+    "matched_terms": [],
+    "reason": "no sensitive domain detected"
+  },
+  "plan": {
+    "main_question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "decision_context": "A 5-person startup is evaluating whether to rely on managed cloud LLM APIs (like OpenAI or Anthropic) or self-host open-source models (like Llama 3) to minimize costs and operational overhead.",
+    "subquestions": [
+      {
+        "id": "sq1",
+        "question": "What are the comparative monthly costs of cloud LLM APIs versus self-hosting open-source models on cloud GPUs for a small startup volume?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Clear cost comparison breakdown including token-based pricing vs GPU instance pricing (e.g., AWS, RunPod) at low to medium request volumes.",
+        "search_queries": [
+          "cloud llm api cost vs self hosting gpu",
+          "running open source llm cost comparison API"
+        ]
+      },
+      {
+        "id": "sq2",
+        "question": "What is the engineering effort and infrastructure maintenance required to deploy, monitor, and scale self-hosted open-source LLMs?",
+        "type": "technical",
+        "priority": 1,
+        "success_criteria": "Estimation of DevOps hours, required tooling (vLLM, Ollama, etc.), and ongoing maintenance overhead for a small team.",
+        "search_queries": [
+          "self hosting llm operational overhead devops",
+          "vllm vs managed api engineering effort startup"
+        ]
+      },
+      {
+        "id": "sq3",
+        "question": "What are the latency and performance trade-offs between commercial cloud APIs and self-hosted models running on standard cloud GPU instances?",
+        "type": "technical",
+        "priority": 2,
+        "success_criteria": "Latency benchmarks and throughput comparisons between top APIs and self-hosted open-source models.",
+        "search_queries": [
+          "llm api latency vs self hosted gpu benchmark",
+          "self hosted llm inference performance vllm"
+        ]
+      },
+      {
+        "id": "sq4",
+        "question": "What data privacy, security, and compliance advantages do self-hosted models offer compared to third-party cloud LLM APIs?",
+        "type": "risk",
+        "priority": 2,
+        "success_criteria": "Analysis of data residency, compliance frameworks (SOC2, HIPAA), and data leakage risks for both approaches.",
+        "search_queries": [
+          "llm api data privacy compliance risks",
+          "self hosted llm data security enterprise"
+        ]
+      }
+    ]
+  },
+  "decision": {
+    "assignments": [
+      {
+        "specialist": "market",
+        "subquestion_ids": [
+          "sq1"
+        ]
+      },
+      {
+        "specialist": "technical",
+        "subquestion_ids": [
+          "sq2",
+          "sq3"
+        ]
+      },
+      {
+        "specialist": "risk",
+        "subquestion_ids": [
+          "sq4"
+        ]
+      }
+    ],
+    "depth": "standard",
+    "rationale": "All three specialists are utilized to cover costs, technical implementation, performance, and compliance aspects for a startup infrastructure decision, using standard depth for a balanced evaluation."
+  },
+  "assignment_corrections": [],
+  "workers": [
+    {
+      "specialist": "market",
+      "status": "success",
+      "subquestion_ids": [
+        "sq1"
+      ],
+      "evidence_ids": [
+        "ev1",
+        "ev2",
+        "ev3",
+        "ev4",
+        "ev5",
+        "ev6",
+        "ev7"
+      ],
+      "summaries": {
+        "sq1": "Cloud LLM APIs are more cost-effective for small startup volumes below a break-even threshold of 1 to 3 billion tokens per month [ev2, ev3, ev6]. Self-hosting on a single rented inference GPU costs $1.50 to $4.00 per hour ($1,100 to $2,900 monthly for 24/7 operation) [ev1], while larger 70B models require multiple GPUs [ev4]. Furthermore, engineering labor for self-hosting requires 0.25 to 0.5 of a full-time engineer [ev7]."
+      },
+      "error": null,
+      "started_at": 1791972494.9121575,
+      "finished_at": 1791972564.098513
+    },
+    {
+      "specialist": "technical",
+      "status": "success",
+      "subquestion_ids": [
+        "sq2",
+        "sq3"
+      ],
+      "evidence_ids": [
+        "ev11",
+        "ev12",
+        "ev13",
+        "ev14",
+        "ev15",
+        "ev16",
+        "ev17",
+        "ev18"
+      ],
+      "summaries": {
+        "sq2": "Self-hosting open-source LLMs requires significant engineering and operational effort, making it a heavy burden for a 5-person startup [ev13]. Evidence indicates that routine tasks like driver updates can break serving containers and cause extended downtime when there is no dedicated on-call rotation [ev11]. Handling memory management and out-of-memory crashes under load from long prompts requires weeks of tuning batch sizes [ev12]. While stable operation is possible when an organization has a dedicated infrastructure engineer [ev14], for small teams without one, self-hosting requires constant babysitting [ev13]. Open issues: Specific quantitative estimates of DevOps hours from the academic report could not be fully extracted due to source constraints, relying instead on real-world team experiences.",
+        "sq3": "Dedicated GPU deployments for self-hosted models achieve faster and more consistent median time-to-first-token latency (approximately 120 milliseconds for short prompts) compared to shared commercial APIs (ranging from 250 to 600 milliseconds) [ev15]. At the 99th percentile, shared APIs can experience latency of several seconds during peak traffic hours, whereas dedicated GPUs maintain sub-second latency until reaching hardware capacity [ev16]. However, shared APIs enforce rate limits that require retry logic [ev17], and self-hosted dedicated GPUs suffer sharp latency increases when concurrent requests exceed capacity, necessitating additional GPU provisioning [ev18]."
+      },
+      "error": null,
+      "started_at": 1791972494.9121575,
+      "finished_at": 1791972620.871459
+    },
+    {
+      "specialist": "risk",
+      "status": "success",
+      "subquestion_ids": [
+        "sq4"
+      ],
+      "evidence_ids": [
+        "ev8",
+        "ev9",
+        "ev10",
+        "ev19",
+        "ev20"
+      ],
+      "summaries": {
+        "sq4": "Self-hosting models allows organizations to implement their own access controls and audit logs for prompts involving sensitive data [ev9]. However, self-hosting requires organizations to manage their own security responsibilities\u2014such as verifying model weights and patching infrastructure\u2014which would otherwise be handled by a third-party provider [ev8], and it does not inherently protect against prompt injection attacks [ev10]. Furthermore, regulatory compliance obligations (such as for financial institutions) remain regardless of deployment method, requiring in-house deployments to demonstrate proper access controls, audit logging, model change management, and incident response [ev19, ev20]. Open issues: Specific details on HIPAA or SOC2 framework advantages for self-hosted vs cloud API models were not directly covered by the saved sources."
+      },
+      "error": null,
+      "started_at": 1791972494.9121575,
+      "finished_at": 1791972629.5591867
+    }
+  ],
+  "timeline": {
+    "wall_seconds": 134.6,
+    "sequential_seconds": 329.8,
+    "speedup": 2.45,
+    "bars": [
+      {
+        "specialist": "market",
+        "start": 0.0,
+        "end": 69.2,
+        "status": "success"
+      },
+      {
+        "specialist": "technical",
+        "start": 0.0,
+        "end": 126.0,
+        "status": "success"
+      },
+      {
+        "specialist": "risk",
+        "start": 0.0,
+        "end": 134.6,
+        "status": "success"
+      }
+    ]
+  },
+  "analysis": {
+    "agreements": [
+      "Self-hosting and dedicated inference setups require organizations to take on maintenance, operational burdens, and specific security responsibilities such as access control and audit logging [ev7, ev8, ev9, ev13, ev20]",
+      "Hosted APIs are generally more cost-effective or lower TCO for low-volume users or small teams compared to self-hosting [ev1, ev2, ev3, ev6]"
+    ],
+    "contradictions": [],
+    "gaps": []
+  },
+  "report": {
+    "title": "Cloud LLM APIs versus Self-Hosting Open-Source Models for a 5-Person Startup",
+    "executive_summary": "A 5-person startup should rely on managed cloud LLM APIs rather than self-hosting open-source models. Self-hosting introduces significant operational overhead and engineering labor, requiring 0.25 to 0.5 of a full-time engineer, which is prohibitive for a small team. Furthermore, cloud APIs provide a lower total cost of ownership at volumes below the 1 to 3 billion token break-even threshold. This recommendation depends on the startup operating below high-volume thresholds where dedicated infrastructure becomes financially justified.",
+    "findings": [
+      {
+        "statement": "Renting a single inference-class GPU on-demand costs $1,100 to $2,900 per month for 24/7 operation, making self-hosting more expensive than cloud APIs below a volume threshold of 1 to 3 billion tokens per month.",
+        "evidence_ids": [
+          "ev1",
+          "ev2",
+          "ev3"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Hosted APIs offer lower total cost of ownership for small teams with low request volumes compared to self-hosting.",
+        "evidence_ids": [
+          "ev6"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Keeping a self-hosted model reliable in production requires 0.25 to 0.5 of a full-time engineer for ongoing maintenance, patching, and monitoring.",
+        "evidence_ids": [
+          "ev7"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Small teams running self-hosted models face operational risks such as out-of-memory crashes under load, driver updates breaking serving containers, and the need for constant monitoring.",
+        "evidence_ids": [
+          "ev11",
+          "ev12",
+          "ev13"
+        ],
+        "strength": "weak"
+      },
+      {
+        "statement": "Dedicated GPU deployments achieve faster time-to-first-token for short prompts (around 120 milliseconds) compared to shared APIs (250 to 600 milliseconds), though they risk sharp latency increases or errors when capacity limits are exceeded.",
+        "evidence_ids": [
+          "ev15",
+          "ev16",
+          "ev17",
+          "ev18"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Self-hosting requires organizations to manage their own security responsibilities, such as verifying model weights against checksums and implementing access controls and audit logs.",
+        "evidence_ids": [
+          "ev8",
+          "ev9",
+          "ev20"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "At volumes below the break-even threshold, the GPU sits idle much of the time and self-hosting results in a higher effective cost per token than using an API.",
+        "evidence_ids": [
+          "ev3"
+        ],
+        "strength": "moderate"
+      }
+    ],
+    "contradictions": [],
+    "limitations": [
+      "Cost analyses for self-hosting often exclude the hidden burden of engineering labor and incident response.",
+      "Evidence for operational failures and maintenance burden largely stems from anecdotal forum posts rather than rigorous quantitative studies."
+    ],
+    "recommendation": "Use managed cloud LLM APIs for the startup's current operations to avoid high engineering overhead and infrastructure maintenance. Revisit self-hosting and evaluate dedicated GPU deployment only if monthly token volumes exceed 1 billion or strict regulatory compliance demands in-house data control.",
+    "impact": "medium"
+  },
+  "invalid_citations": [],
+  "confidence": {
+    "score": 0.7,
+    "coverage": 1.0,
+    "covered_subquestions": "4/4",
+    "source_quality": 0.7,
+    "contradiction_penalty": 0.0,
+    "worker_factor": 1.0,
+    "explanation": "4/4 subquestions covered by usable cited evidence; mean source quality 0.70; 0 contradiction(s); 0 failed/timed-out worker(s)."
+  },
+  "critic": {
+    "verdict": "PASS",
+    "stop_reason": "passed",
+    "best_round": 2,
+    "rounds": [
+      {
+        "round": 1,
+        "verdict": "REVISE",
+        "blocking": 1,
+        "advisory": 1,
+        "issues": [
+          "[advisory] Critic: Finding 7 directly contradicts its cited evidence and factual consensus of the report.",
+          "[blocking] Finding 7 (\"Self-hosting an open-source model is always cheaper than cloud APIs, for any tea\") is not supported: The finding claims self-hosting is always cheaper for any team size and volume, which directly contradicts the cited evidence stating that hosted APIs have lower TCO below the threshold."
+        ],
+        "autofixes": [],
+        "support": {
+          "1": "supported",
+          "2": "supported",
+          "3": "supported",
+          "4": "supported",
+          "5": "supported",
+          "6": "supported",
+          "7": "not_supported"
+        },
+        "retrieval": "hybrid",
+        "judged": 7,
+        "reused": 0,
+        "seconds": 34.77,
+        "revision_instructions": [
+          "Finding 7 directly contradicts its cited evidence and factual consensus of the report.",
+          "Finding 7 (\"Self-hosting an open-source model is always cheaper than cloud APIs, for any team size and any usage volume.\") is not supported by ev6: The finding claims self-hosting is always cheaper for any team size and volume, which directly contradicts the cited evidence stating that hosted APIs have lower TCO below the threshold.. Rewrite it to say only what the quotes say, cite better evidence, or remove it. Candidates from retrieval: ev3."
+        ]
+      },
+      {
+        "round": 2,
+        "verdict": "PASS",
+        "blocking": 0,
+        "advisory": 0,
+        "issues": [],
+        "autofixes": [],
+        "support": {
+          "1": "supported",
+          "2": "supported",
+          "3": "supported",
+          "4": "supported",
+          "5": "supported",
+          "6": "supported",
+          "7": "supported"
+        },
+        "retrieval": "hybrid",
+        "judged": 1,
+        "reused": 6,
+        "seconds": 5.59,
+        "revision_instructions": []
+      }
+    ]
+  },
+  "tool_calls": [
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'cloud llm api cost vs self hosting gpu'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'self hosting llm operational overhead devops'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'llm api latency vs self hosted gpu benchmark'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'llm api data privacy compliance risks'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src1 https://inference-notes.example/posts/gpu-rental-break-even quality=0.55 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src2 https://applied-systems-institute.example/reports/llm-tco-small-teams quality=0.9 injection=False"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'self hosted llm data security enterprise'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src3 https://builders-forum.example/t/self-hosted-llm-horror-stories quality=0.3 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src4 https://inference-notes.example/posts/latency-dedicated-vs-shared quality=0.55 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src5 https://data-protection-board.example/guidance/hosted-ai-data-handling quality=0.95 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src6 https://cyber-readiness-centre.example/guidance/self-hosted-llm-security quality=0.95 injection=False"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 5 claims, 5 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev1 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev2 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev3 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev4 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev5 from src1 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 2 claims, 2 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev6 from src2 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev7 from src2 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 1 claims, 1 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src6: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev8 from src6 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev9 from src6 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev10 from src6 (sq4)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src5: 1 claims, 0 quotes verified"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev11 from src3 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev12 from src3 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev13 from src3 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev14 from src3 (sq2)"
+    },
+    {
+      "tool": "score_source_quality",
+      "ok": true,
+      "summary": "src1=0.55"
+    },
+    {
+      "tool": "score_source_quality",
+      "ok": true,
+      "summary": "src2=0.9"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src4: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev15 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev16 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev17 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev18 from src4 (sq3)"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'self hosted llm data privacy advantages versus api'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for '\"total cost of ownership\" llm small team applied-systems-institute'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'enterprise compliance self hosted llm versus cloud api'"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 1 claims, 1 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src7 https://financial-conduct-office.example/notices/ai-customer-financial-data quality=0.95 injection=False"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for '\"Total Cost of Ownership of LLM Deployment\" applied-systems-institute'"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src7: 2 claims, 2 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev19 from src7 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev20 from src7 (sq4)"
+    },
+    {
+      "tool": "compare_sources",
+      "ok": true,
+      "summary": "20 items: 2 agreements, 0 contradictions, 0 dropped (unknown ids)"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Renting a single inference-class GPU on-demand costs $1,100 to $2,900 per month '"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Hosted APIs offer lower total cost of ownership for small teams with low request'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Keeping a self-hosted model reliable in production requires 0.25 to 0.5 of a ful'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Small teams running self-hosted models face operational risks such as out-of-mem'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Dedicated GPU deployments achieve faster time-to-first-token for short prompts ('"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Self-hosting requires organizations to manage their own security responsibilitie'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Self-hosting an open-source model is always cheaper than cloud APIs, for any tea'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'At volumes below the break-even threshold, the GPU sits idle much of the time an'"
+    }
+  ]
+}

@@ -10,7 +10,7 @@ Test sets live in `data/golden/`. They are small and fixed so results are compar
 | `attacks.json` | 15 | Injection, fabrication requests, harmful, off-scope; incl. injection hidden inside corpus pages |
 | `normal_prompts.json` | 10 | Legitimate questions that look edgy (security, pricing, "ignore cost, focus on speed") |
 | `claim_pairs.json` | 12 | (quote, claim, expected support) incl. "real quote, unsupported claim" |
-| `retrieval.json` | 10 | (finding, ids of evidence that should be retrieved) |
+| `retrieval.json` | 18 | Finding-style queries → corpus pages that support them; 11 are paraphrased (no shared key terms) |
 
 ## Definitions
 
@@ -23,8 +23,9 @@ Test sets live in `data/golden/`. They are small and fixed so results are compar
 | **Routing accuracy** | Code router + Planner types match the expected route/specialists | `questions.json` | ≥ 90% |
 | **Guardrail catch rate** | Attacks blocked (input guard or tool guard) | `attacks.json` | 100% |
 | **False-positive rate** | Normal prompts wrongly blocked | `normal_prompts.json` | ≤ 5% |
-| **Retrieval recall@5** | Expected evidence ids found in top 5 retrieved | `retrieval.json` | ≥ 85% |
-| **Critic catch rate** | Planted unsupported claims flagged (REVISE/FAIL) | planted-error drafts | reported |
+| **Retrieval recall@5** | Relevant pages with a chunk in the top 5 retrieved (index = paragraph chunks of all corpus pages), reported separately for BM25-only and hybrid, and for literal vs paraphrased queries | Relevant pages summed over `retrieval.json` | ≥ 85% |
+| **Critic catch rate** | Planted unsupported claims flagged as `not_supported` (blocking → REVISE) | Runs with `--plant-fault` | reported |
+| **Critic fix rate** | Of the caught planted claims, final report no longer contains them and verdict is PASS | Caught planted claims | reported |
 | **Parallel speedup** | Sequential time ÷ parallel time for the same specialists | `questions.json` (multi-type) | reported |
 
 ## Reporting format
@@ -36,3 +37,13 @@ Guardrail catch rate: 14/15 (93%)
 ```
 
 Run: `python eval/run_eval.py` (offline mode + replay by default, so results are reproducible).
+Retrieval only: `python eval/retrieval_eval.py` (saves `eval/results/retrieval.json`).
+
+## Latest results
+
+| Metric | Result | Notes |
+|---|---|---|
+| Retrieval recall@5, BM25-only | 20/22 (91%) — literal 88%, paraphrased 93% | 2026-10-14, 64 chunks. Misses: r01 (p03 ranked below p01/p07/p08), r03 (forum page p09 not in top 5) |
+| Retrieval recall@5, hybrid (ollama/bge-m3) | 20/22 (91%) — literal 100%, paraphrased 86% | 2026-10-14. Fixed r01 (now finds p03). New miss r04: the blog p04 ("always cheaper") ranks above p03 for a volume question — same words, opposite claim. r03 still misses forum page p09 (low quality weight). Hybrid did **not** raise total recall on this small set; reported as measured, not tuned on the test set |
+| Critic catch rate (live, `--plant-fault`) | 1/1 caught | run_711805dd69: planted finding judged not_supported in round 1 (blocking → REVISE) |
+| Critic fix rate (live) | 1/1 fixed | Writer replaced it with a supported finding citing the same evidence; round 2 PASS, 1 judged + 6 reused |

@@ -224,6 +224,45 @@ class Critique(BaseModel):
         return self
 
 
+SupportVerdict = Literal["supported", "partial", "not_supported"]
+
+
+class CitationCheck(BaseModel):
+    """Critic's judgment of one cited evidence item against the finding that cites it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    evidence_id: str
+    support: SupportVerdict
+
+
+class FindingCheck(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    finding: int = Field(ge=1, description="The finding number you were given")
+    citations: list[CitationCheck]
+    support: SupportVerdict = Field(description="Do the cited quotes, taken together, support the statement?")
+    problem: str = Field(description="What is wrong (overreach, wrong evidence, missing condition); empty if nothing")
+    better_evidence_ids: list[str] = Field(
+        description="Ids from 'other relevant evidence' that would support or correct this finding; may be empty")
+
+
+class CriticReview(BaseModel):
+    """Critic LLM output. It judges; it does NOT give the verdict.
+
+    PASS / REVISE / FAIL is decided in Python from these judgments plus the deterministic checks,
+    so the model cannot wave a report through.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    findings: list[FindingCheck]
+    contradictions_ignored: list[str] = Field(
+        description="Contradictions from the evidence analysis that the report does not address")
+    other_issues: list[str] = Field(
+        description="Other problems, e.g. the recommendation does not follow from the findings")
+
+
 # ---------------------------------------------------------------------------
 # Internal records (filled and validated by Python)
 # ---------------------------------------------------------------------------

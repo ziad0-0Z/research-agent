@@ -6,9 +6,11 @@ import time
 import pytest
 
 from research_agent import config as cfg
+import json
+
 from research_agent.models import (
-    Assignment, Contradiction, EvidenceAnalysis, Finding, OrchestrationDecision, ResearcherOutput, ResearchPlan,
-    ResearchReport, SubQuestion, SubquestionResult,
+    Assignment, CitationCheck, Contradiction, CriticReview, EvidenceAnalysis, Finding, FindingCheck,
+    OrchestrationDecision, ResearcherOutput, ResearchPlan, ResearchReport, SubQuestion, SubquestionResult,
 )
 from research_agent.store import Store
 from research_agent.tools import evidence, web
@@ -124,9 +126,31 @@ def _sentences(text, n=2):
     return out[:n]
 
 
-def make_fake_run_agent(break_worker=None, writer_fixes_on_revision=False):
+UNSUPPORTED_MARKERS = ("always cheaper",)
+
+
+def fake_critic_review(prompt, calls=None):
+    """Plays the Critic: statements with an unsupported marker are not_supported, the rest supported."""
+    items = json.loads(prompt.split("Findings to check (JSON):\n", 1)[1])
+    if calls is not None:
+        calls.append([i["finding"] for i in items])
+    checks = []
+    for item in items:
+        bad = any(m in item["statement"].lower() for m in UNSUPPORTED_MARKERS)
+        level = "not_supported" if bad else "supported"
+        checks.append(FindingCheck(
+            finding=item["finding"],
+            citations=[CitationCheck(evidence_id=e["id"], support=level) for e in item["cited_evidence"]],
+            support=level, problem="the quote says the opposite" if bad else "",
+            better_evidence_ids=[e["id"] for e in item["other_relevant_evidence"][:1]] if bad else []))
+    return CriticReview(findings=checks, contradictions_ignored=[], other_issues=[])
+
+
+def make_fake_run_agent(break_worker=None, writer_fixes_on_revision=False, critic_calls=None):
     async def fake(agent, prompt, ctx, max_turns):
         name = agent.name
+        if name == "Critic":
+            return fake_critic_review(prompt, critic_calls)
         if name == "Planner":
             return _plan("market", "technical", "risk")
         if name == "Research Orchestrator":
@@ -187,25 +211,60 @@ def test_pipeline_end_to_end_offline(settings):
 
     assert result.route.path == "standard"
     assert [w.status for w in result.workers] == ["success", "success", "success"]
+    # The fake Writer keeps inventing ev999: REVISE, then the same blocking issue again → FAIL (no progress).
     assert events == ["routed", "planned", "delegated", "research_started", "research_done",
-                      "analysed", "drafted", "citations_repaired", "checked"]
+                      "analysed", "drafted", "critic_round", "revised", "critic_round", "critic_done", "checked"]
     assert len(result.analysis.contradictions) == 1
     assert result.invalid_citations == [{"evidence_id": "ev999",
                                          "reason": "evidence id does not exist in this run"}]
+    assert result.critic.verdict == "FAIL" and result.critic.stop_reason == "no_progress"
+    assert any("Critic FAIL" in r for r in result.ctx.review_reasons)
     assert 0 < result.confidence["score"] <= 1 and result.confidence["covered_subquestions"] == "3/3"
     assert "DRAFT" in result.draft_markdown and "## Evidence appendix" in result.draft_markdown
     assert result.timeline["bars"] and result.timeline["speedup"] > 0
 
 
-def test_writer_repair_round_fixes_invented_citation(settings):
+def test_critic_loop_fixes_invented_citation(settings):
     events = []
     result = run(pipeline.run_research(
         "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
         settings=settings, store=Store(":memory:"), run_agent=make_fake_run_agent(writer_fixes_on_revision=True),
         on_event=lambda stage, data: events.append((stage, data))))
-    repaired = [d for st, d in events if st == "citations_repaired"]
-    assert repaired == [{"attempt": 1, "before": 1, "after": 0}]
+    rounds = [d for st, d in events if st == "critic_round"]
+    assert [r["verdict"] for r in rounds] == ["REVISE", "PASS"]
+    assert any("ev999" in i for i in rounds[0]["issues"])
     assert result.invalid_citations == [] and "ev999" not in result.report.cited_evidence_ids()
+    assert result.critic.verdict == "PASS" and "Critic verdict **PASS**" in result.draft_markdown
+
+
+def test_planted_unsupported_claim_is_caught_and_fixed(settings):
+    """Phase 4 exit criterion: a real quote cited for a claim it does not support → REVISE → PASS."""
+    events = []
+    result = run(pipeline.run_research(
+        "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+        settings=settings, store=Store(":memory:"), run_agent=make_fake_run_agent(writer_fixes_on_revision=True),
+        on_event=lambda stage, data: events.append((stage, data)), demo_fault="unsupported_claim"))
+    first = result.critic.rounds[0]
+    planted_n = len(first.report.findings)  # the planted finding was appended last
+    assert first.verdict == "REVISE"
+    assert first.support[planted_n] == "not_supported"
+    assert any(i.kind == "unsupported" and i.finding == planted_n and i.severity == "blocking" for i in first.issues)
+    assert any("Candidates from retrieval" in x for x in first.critique.revision_instructions)
+    assert result.critic.verdict == "PASS" and len(result.critic.rounds) == 2
+    assert all("always cheaper" not in f.statement for f in result.report.findings)
+    # The planted citation was a real, verified id: only the support check could catch it.
+    assert result.invalid_citations == []
+
+
+def test_critic_does_not_rejudge_unchanged_findings(settings):
+    calls = []
+    run(pipeline.run_research(
+        "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+        settings=settings, store=Store(":memory:"),
+        run_agent=make_fake_run_agent(writer_fixes_on_revision=True, critic_calls=calls)))
+    # Round 2: the Writer only removed the bad finding; the four good findings are reused, so no
+    # second Critic call is needed at all.
+    assert len(calls) == 1 and calls[0] == [1, 2, 3, 4]
 
 
 def test_evidence_id_formatting_is_normalized_but_not_guessed():

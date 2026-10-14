@@ -20,7 +20,8 @@ Write:
 - findings: 3-8 findings. Each statement must be supported by the evidence it cites in
   evidence_ids. strength: strong (several good sources or one high-quality source with specifics),
   moderate, or weak (single low-quality source or partial support).
-- contradictions: where sources disagree and why (scope, assumptions, what is counted).
+- contradictions: where sources disagree and why (scope, assumptions, what is counted). Name the
+  evidence on each side in brackets, e.g. "[ev2] vs [ev7]: the blog ignores engineering time".
 - limitations: gaps, failed or partial research, weak-only evidence, and anything the evidence
   does not cover. Be honest; this is where uncertainty goes.
 - recommendation: concrete and conditional (e.g. "do X now; revisit when Y"). It must follow from
@@ -33,7 +34,8 @@ Rules:
   (no prefixes such as "id:", no brackets, no quotes). Never invent ids.
 - Never state a claim more strongly than its quote supports; keep conditions (team size, volume).
 - Prefer high-quality sources; when a low-quality source disagrees with a high-quality one, say so.
-- If revision instructions are included, fix every point they raise."""
+- If revision instructions are included, fix every point they raise and keep the other findings
+  unchanged."""
 
 
 @lru_cache(maxsize=1)

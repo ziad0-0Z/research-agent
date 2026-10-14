@@ -3,12 +3,9 @@ half of validate_citation. All pure Python: the rules here cannot be talked
 around by a model."""
 from __future__ import annotations
 
-from rank_bm25 import BM25Plus
-
 from ..context import AppContext
 from ..models import Evidence
 from ..store import DuplicateEvidenceError
-from .corpus import tokenize
 from .quality import score_quality
 from .quotes import verify_quote
 from .web import ToolError
@@ -72,38 +69,34 @@ def score_source_quality(ctx: AppContext, source_id: str) -> dict:
     return {"source_id": source_id, **breakdown}
 
 
-def retrieve_evidence(ctx: AppContext, query: str, k: int = 5) -> dict:
-    """Lexical (BM25) retrieval over this run's evidence, weighted by source quality.
+def retrieve_evidence(ctx: AppContext, query: str, k: int = 5, exclude_ids: set[str] | None = None) -> dict:
+    """Hybrid retrieval (BM25 + embeddings, rank-fused, quality-weighted) over this run's evidence.
 
-    Phase 4 upgrades this to hybrid BM25 + embeddings (the RAG bonus).
+    The RAG bonus: the Critic calls this per finding to see which saved evidence is most relevant,
+    so it can spot findings that cite the wrong item or ignore a better or contradicting one.
+    Falls back to BM25-only when no embedding provider is reachable; `method` says which ran.
     """
-    items = ctx.store.list_evidence(ctx.run_id)
-    items = [e for e in items if e.status == "active"]
+    from ..rag import Doc, get_embedder, retrieve
+
+    items = [e for e in ctx.store.list_evidence(ctx.run_id)
+             if e.status == "active" and e.id not in (exclude_ids or set())]
     if not items:
-        return {"query": query, "results": []}
-    docs = [tokenize(f"{e.claim} {e.quote}") for e in items]
-    q = tokenize(query)
-    # BM25+ keeps term weights positive even in tiny collections (plain BM25 gives
-    # zero weight to a term found in half the documents).
-    raw = BM25Plus(docs).get_scores(q)
-    overlap = [bool(set(q) & set(d)) for d in docs]
-    top = max((s for s, o in zip(raw, overlap) if o), default=1.0) or 1.0
-    scored = []
-    for ev, s, has_overlap in zip(items, raw, overlap):
-        if not has_overlap:
-            continue
-        source = ctx.store.get_source(ctx.run_id, ev.source_id)
-        quality = source.quality_score if source else 0.5
-        scored.append((0.7 * (s / top) + 0.3 * quality, ev, quality))
-    scored.sort(key=lambda x: x[0], reverse=True)
-    k = max(1, min(int(k), 10))
-    results = [
-        {"evidence_id": ev.id, "score": round(score, 3), "claim": ev.claim, "quote": ev.quote,
-         "source_id": ev.source_id, "source_quality": quality, "support": ev.support}
-        for score, ev, quality in scored[:k]
-    ]
-    ctx.log_tool("retrieve_evidence", True, f"{len(results)} hits for {query!r}")
-    return {"query": query, "results": results}
+        return {"query": query, "results": [], "method": "none", "embed_provider": None}
+    docs = []
+    for e in items:
+        source = ctx.store.get_source(ctx.run_id, e.source_id)
+        docs.append(Doc(id=e.id, text=f"{e.claim} {e.quote}", quality=source.quality_score if source else 0.5,
+                        meta={"evidence": e}))
+    embedder = get_embedder(ctx.settings) if ctx.settings.embed_mode != "off" else None
+    found = retrieve(query, docs, k=k, embedder=embedder)
+    results = []
+    for h in found.hits:
+        ev = h.doc.meta["evidence"]
+        results.append({"evidence_id": ev.id, "score": h.score, "claim": ev.claim, "quote": ev.quote,
+                        "source_id": ev.source_id, "source_quality": h.doc.quality, "support": ev.support,
+                        "subquestion_id": ev.subquestion_id, "bm25_rank": h.bm25_rank, "dense_rank": h.dense_rank})
+    ctx.log_tool("retrieve_evidence", True, f"{len(results)} hits ({found.method}) for {query[:80]!r}")
+    return {"query": query, "results": results, "method": found.method, "embed_provider": found.embed_provider}
 
 
 def check_citation(ctx: AppContext, evidence_id: str) -> dict:
