@@ -17,17 +17,25 @@ from agents import Agent, GuardrailFunctionOutput, RunContextWrapper, input_guar
 from .input import prefilter
 
 
+def _content_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(c.get("text", "") for c in content if isinstance(c, dict))
+    return ""
+
+
 def _text(value: Any) -> str:
+    """The text to check: the input string, or — when a session prepends earlier turns — only the
+    newest user message. Earlier turns were checked when they were new; assistant turns are our own
+    released output, and checking the whole history would also trip the length limit."""
     if isinstance(value, str):
         return value
-    parts = []
-    for item in value or []:
-        content = item.get("content") if isinstance(item, dict) else None
-        if isinstance(content, str):
-            parts.append(content)
-        elif isinstance(content, list):
-            parts += [c.get("text", "") for c in content if isinstance(c, dict)]
-    return "\n".join(parts)
+    items = [i for i in (value or []) if isinstance(i, dict)]
+    users = [i for i in items if i.get("role") == "user"]
+    if users:
+        return _content_text(users[-1].get("content"))
+    return "\n".join(_content_text(i.get("content")) for i in items)
 
 
 def planner_input_check(context: Any, text: str) -> GuardrailFunctionOutput:

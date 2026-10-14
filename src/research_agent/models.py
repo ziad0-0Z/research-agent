@@ -3,8 +3,8 @@
 Two families:
 - LLM output models: what agents must return (`output_type=`). Kept free of
   defaults and exotic types so they convert to strict JSON schemas.
-- Internal records: what Python stores and validates (sources, evidence, reviews,
-  memory). The LLM never fills these directly.
+- Internal records: what Python stores and validates (sources, evidence, reviews).
+  Long-term memory has its own store (memory/store.py). The LLM never fills these directly.
 """
 from __future__ import annotations
 
@@ -350,12 +350,3 @@ class HumanReview(BaseModel):
     reviewer_note: str = ""
     created_at: datetime = Field(default_factory=utcnow)
     decided_at: datetime | None = None
-
-
-class MemoryRecord(BaseModel):
-    kind: Literal["evidence", "report", "user_context"]
-    ref_id: str
-    text: str
-    claim_type: Literal["pricing", "technical", "general"] = "general"
-    created_at: datetime = Field(default_factory=utcnow)
-    expires_at: datetime | None = None

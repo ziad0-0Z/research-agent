@@ -175,7 +175,7 @@ def apply_strength_rules(ctx: AppContext, report: ResearchReport, support: dict[
             ev = ctx.store.get_evidence(ctx.run_id, eid)
             src = ctx.store.get_source(ctx.run_id, ev.source_id) if ev else None
             if src:
-                sources[src.id] = src.quality_score
+                sources[str(src.url).rstrip("/")] = src.quality_score  # distinct pages, not source rows
         qualities = list(sources.values())
         if strength == "strong" and support.get(n) == "partial":
             strength = "moderate"

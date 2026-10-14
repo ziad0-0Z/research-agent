@@ -1,0 +1,582 @@
+{
+  "run_id": "run_d8e682d9c4",
+  "question": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?",
+  "status": "completed",
+  "input_check": {
+    "allowed": true,
+    "category": "valid_research",
+    "reason": "The request asks for a cost and business comparison between self-hosting and using cloud APIs.",
+    "checked_by": "guard_agent",
+    "domain": "business",
+    "matched": [],
+    "requires_review": false
+  },
+  "output_check": {
+    "passed": true,
+    "checks_run": [
+      "schema",
+      "structure",
+      "citations",
+      "support",
+      "unconfirmed_actions",
+      "links",
+      "injection"
+    ],
+    "issues": []
+  },
+  "gate_reasons": [],
+  "route": {
+    "path": "standard",
+    "requires_review": false,
+    "domains": [],
+    "matched_terms": [],
+    "reason": "no sensitive domain detected"
+  },
+  "plan": {
+    "main_question": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?",
+    "decision_context": "A startup leadership team is evaluating monthly operational and infrastructure costs to determine the most cost-effective LLM deployment strategy at scale.",
+    "subquestions": [
+      {
+        "id": "sq1",
+        "question": "What are the infrastructure and GPU hardware costs required to self-host popular open-source LLMs like Llama 3?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Specific cloud GPU pricing (e.g. AWS, Lambda Labs) for hosting 8B and 70B parameter models.",
+        "search_queries": [
+          "cost to self host llama 3 gpu pricing",
+          "aws g5 instance pricing for llm inference"
+        ]
+      },
+      {
+        "id": "sq2",
+        "question": "What are the typical per-token pricing structures for commercial cloud LLM APIs like OpenAI GPT-4o and Anthropic Claude?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Current input and output token costs per million tokens for leading commercial APIs.",
+        "search_queries": [
+          "openai api pricing per token",
+          "anthropic claude api pricing"
+        ]
+      },
+      {
+        "id": "sq3",
+        "question": "What engineering overhead and maintenance costs are associated with deploying and scaling self-hosted LLMs?",
+        "type": "technical",
+        "priority": 2,
+        "success_criteria": "Estimation of engineering hours, DevOps requirements, and tooling needed for self-hosted inference.",
+        "search_queries": [
+          "cost of engineering overhead self hosting llm",
+          "devops effort to self host open source llm"
+        ]
+      },
+      {
+        "id": "sq4",
+        "question": "At what monthly token volume does self-hosting open-source LLMs become more cost-effective than using pay-as-you-go cloud APIs?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Break-even analysis or token volume threshold comparing self-hosting vs API costs.",
+        "search_queries": [
+          "break even point self host llm vs api",
+          "when is self hosting llm cheaper than api"
+        ]
+      }
+    ]
+  },
+  "decision": {
+    "assignments": [
+      {
+        "specialist": "market",
+        "subquestion_ids": [
+          "sq1",
+          "sq2",
+          "sq4"
+        ]
+      },
+      {
+        "specialist": "technical",
+        "subquestion_ids": [
+          "sq3"
+        ]
+      }
+    ],
+    "depth": "standard",
+    "rationale": "Market and technical specialists are assigned to their respective subquestions to thoroughly evaluate infrastructure costs, API pricing, engineering overhead, and the break-even token volume for the startup."
+  },
+  "assignment_corrections": [],
+  "workers": [
+    {
+      "specialist": "market",
+      "status": "success",
+      "subquestion_ids": [
+        "sq1",
+        "sq2",
+        "sq4"
+      ],
+      "evidence_ids": [
+        "ev9",
+        "ev10",
+        "ev11",
+        "ev12",
+        "ev13",
+        "ev14",
+        "ev1",
+        "ev2",
+        "ev3",
+        "ev4",
+        "ev5",
+        "ev6",
+        "ev7",
+        "ev8",
+        "ev16"
+      ],
+      "summaries": {
+        "sq1": "Renting a single inference-class GPU on-demand costs between $1.50 and $4.00 per hour [ev9], which translates to approximately $1,100 to $2,900 per month running 24/7 before storage and networking [ev10]. A single high-memory GPU can serve 7\u201314 billion parameter models [ev11]. Furthermore, maintenance and engineering labor represent a substantial hidden cost, requiring 0.25 to 0.5 of a full-time engineer's ongoing effort [ev13].",
+        "sq2": "Commercial LLM APIs use a pay-as-you-go pricing structure where costs scale linearly with usage [ev3]. Small and mid-sized models cost between $0.10 and $0.60 per million input tokens, while frontier models range from $2 to $15 per million input tokens [ev1]. Output tokens generally cost three to five times more than input tokens [ev2].",
+        "sq4": "The break-even point for self-hosting a mid-sized model compared to cloud APIs occurs between 1 and 3 billion tokens per month [ev5, ev7]. Below this threshold, self-hosting is less cost-effective due to idle GPU capacity [ev6] and the overhead of engineering labor [ev12, ev16]."
+      },
+      "error": null,
+      "started_at": 1791982654.9661376,
+      "finished_at": 1791982726.2859998
+    },
+    {
+      "specialist": "technical",
+      "status": "success",
+      "subquestion_ids": [
+        "sq3"
+      ],
+      "evidence_ids": [
+        "ev15",
+        "ev17",
+        "ev18",
+        "ev19"
+      ],
+      "summaries": {
+        "sq3": "Engineering labor is a critical component of the total cost of ownership for self-hosted models alongside compute, storage, and networking [ev15]. Self-hosting introduces maintenance overhead such as driver updates, capacity management, monitoring, and handling outages (e.g., driver updates breaking serving containers or long prompts causing out-of-memory crashes) [ev17, ev18, ev19]. Small engineering teams may find that these maintenance and supervision requirements consume significant resources [ev19]."
+      },
+      "error": null,
+      "started_at": 1791982654.9661376,
+      "finished_at": 1791982740.0325313
+    }
+  ],
+  "timeline": {
+    "wall_seconds": 85.1,
+    "sequential_seconds": 156.4,
+    "speedup": 1.84,
+    "bars": [
+      {
+        "specialist": "market",
+        "start": 0.0,
+        "end": 71.3,
+        "status": "success"
+      },
+      {
+        "specialist": "technical",
+        "start": 0.0,
+        "end": 85.1,
+        "status": "success"
+      }
+    ]
+  },
+  "analysis": {
+    "agreements": [
+      "Small and mid-sized models have lower token costs, while frontier models are significantly more expensive [ev1].",
+      "The break-even point for self-hosting versus cloud APIs occurs around 1 to 3 billion tokens per month [ev5, ev7, ev16].",
+      "Self-hosted models require substantial ongoing engineering labor and maintenance [ev8, ev12, ev13, ev15, ev19]."
+    ],
+    "contradictions": [],
+    "gaps": []
+  },
+  "report": {
+    "title": "Cost Analysis: Self-Hosting Open-Source LLMs vs. Cloud APIs for Startups",
+    "executive_summary": "For most startups, using pay-as-you-go cloud APIs is more cost-effective than self-hosting open-source LLMs. Self-hosting only becomes cheaper in direct compute costs when monthly token volumes exceed 1 to 3 billion tokens. However, the total cost of ownership for self-hosting must also account for substantial engineering overhead and maintenance labor.",
+    "findings": [
+      {
+        "statement": "Small and mid-sized commercial APIs are priced between $0.10 and $0.60 per million input tokens, while frontier models range from $2 to $15 per million input tokens.",
+        "evidence_ids": [
+          "ev1"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Output tokens typically cost three to five times more than input tokens.",
+        "evidence_ids": [
+          "ev2"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "The break-even point for self-hosting a mid-sized model compared to cloud APIs falls between 1 and 3 billion tokens per month.",
+        "evidence_ids": [
+          "ev5",
+          "ev7",
+          "ev16"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Operating a single on-demand inference-class GPU 24/7 costs roughly $1,100 to $2,900 per month, excluding storage, networking, and monitoring.",
+        "evidence_ids": [
+          "ev9",
+          "ev10"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Maintaining a self-hosted model in production requires between 0.25 and 0.5 of a full-time engineer on an ongoing basis for tasks such as patching drivers, handling capacity, and upgrading models.",
+        "evidence_ids": [
+          "ev13",
+          "ev15"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "For organizations with fewer than ten engineers, the cost of engineering labor often outweighs the compute savings of self-hosting until token volumes reach several billion per month.",
+        "evidence_ids": [
+          "ev12"
+        ],
+        "strength": "strong"
+      }
+    ],
+    "contradictions": [],
+    "limitations": [
+      "Initial compute cost analyses often exclude engineering time, setup, autoscaling, and maintenance.",
+      "Specific edge cases such as strict data-residency requirements or deep model customization needs are not fully quantified in financial terms."
+    ],
+    "recommendation": "Startups should use pay-as-you-go commercial APIs until monthly token volumes consistently exceed 1 to 3 billion tokens. Revisit self-hosting only when scale justifies the dedicated engineering overhead or when specific data-residency requirements apply.",
+    "impact": "medium"
+  },
+  "invalid_citations": [],
+  "confidence": {
+    "score": 0.73,
+    "coverage": 1.0,
+    "covered_subquestions": "4/4",
+    "source_quality": 0.73,
+    "contradiction_penalty": 0.0,
+    "worker_factor": 1.0,
+    "explanation": "4/4 subquestions covered by usable cited evidence; mean source quality 0.73; 0 contradiction(s); 0 failed/timed-out worker(s)."
+  },
+  "critic": {
+    "verdict": "PASS",
+    "stop_reason": "passed",
+    "best_round": 1,
+    "rounds": [
+      {
+        "round": 1,
+        "verdict": "PASS",
+        "blocking": 0,
+        "advisory": 0,
+        "issues": [],
+        "autofixes": [
+          "Finding 1: strong \u2192 moderate (needs 2+ sources or one with quality \u2265 0.8)",
+          "Finding 2: strong \u2192 moderate (needs 2+ sources or one with quality \u2265 0.8)"
+        ],
+        "support": {
+          "1": "supported",
+          "2": "supported",
+          "3": "supported",
+          "4": "supported",
+          "5": "supported",
+          "6": "supported"
+        },
+        "retrieval": "hybrid",
+        "judged": 6,
+        "reused": 0,
+        "seconds": 15.39,
+        "revision_instructions": []
+      }
+    ]
+  },
+  "tool_calls": [
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'cost of engineering overhead self hosting llm'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for 'cost to self host llama 3 gpu pricing'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for 'openai api pricing per token'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for 'break even point self host llm vs api'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'devops effort to self host open source llm'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src1 https://inference-notes.example/posts/gpu-rental-break-even quality=0.55 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src2 https://northwind-tech-review.example/2026/08/llm-api-pricing-small-teams quality=0.75 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src3 https://applied-systems-institute.example/reports/llm-tco-small-teams quality=0.9 injection=False"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev1 from src2 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev2 from src2 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev3 from src2 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev4 from src2 (sq2)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev5 from src1 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev6 from src1 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev7 from src1 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev8 from src1 (sq4)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 5 claims, 5 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev9 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev10 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev11 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 3 results for 'cost to self host 70B parameter LLM GPU requirements'"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev12 from src3 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev13 from src3 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev14 from src3 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev15 from src3 (sq3)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev16 from src3 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 2 claims, 2 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for '\"engineering hours\" self host llm devops'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src4 https://builders-forum.example/t/self-hosted-llm-horror-stories quality=0.3 injection=False"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src4: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev17 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev18 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev19 from src4 (sq3)"
+    },
+    {
+      "tool": "compare_sources",
+      "ok": true,
+      "summary": "19 items: 3 agreements, 0 contradictions, 0 dropped (unknown ids)"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Small and mid-sized commercial APIs are priced between $0.10 and $0.60 per milli'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Output tokens typically cost three to five times more than input tokens.'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'The break-even point for self-hosting a mid-sized model compared to cloud APIs f'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Operating a single on-demand inference-class GPU 24/7 costs roughly $1,100 to $2'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Maintaining a self-hosted model in production requires between 0.25 and 0.5 of a'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'For organizations with fewer than ten engineers, the cost of engineering labor o'"
+    },
+    {
+      "tool": "generate_report",
+      "ok": true,
+      "summary": "rendered 5304 chars"
+    }
+  ],
+  "memory": {
+    "lookup": {
+      "enabled": false,
+      "related_reports": [],
+      "candidates": 0,
+      "reused": 0,
+      "reverified": 0,
+      "unverifiable": [],
+      "skipped_reverify_budget": 0,
+      "rejected": [],
+      "coverage": {},
+      "covered_subquestions": [],
+      "retrieval": "none",
+      "items": []
+    },
+    "commit": {
+      "committed": false,
+      "reason": "MEMORY_MODE=off"
+    }
+  },
+  "session_id": "s_1791982650"
+}

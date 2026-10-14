@@ -27,6 +27,7 @@ from ..store import Store
 from .confidence import compute_confidence
 from .eval_loop import revision_prompt, writer_critic_loop
 from .release import Release, release_report
+from .session import open_session, record_turn
 
 Decision = Literal["approved", "rejected", "changes_requested"]
 RunAgent = Callable[[Agent, str, AppContext, int], Awaitable[Any]]
@@ -103,9 +104,19 @@ def _restore(settings: Settings, store: Store, run_id: str) -> tuple[AppContext,
     ic = state.get("input_check") or {}
     ctx.input_check = InputCheck(True, "valid_research", ic.get("reason", "checked when the run started"),
                                  ic.get("checked_by", "guard_agent"), ic.get("domain"))
+    ctx.demo_fault = state.get("demo_fault")
+    ctx.memory_reuse = dict(state.get("memory_reuse") or {})
     ctx._counters["ev"] = len(store.list_evidence(run_id))
     ctx._counters["src"] = len(store.list_sources(run_id))
     return ctx, state
+
+
+async def _record_in_conversation(settings: Settings, state: dict, run_id: str, question: str, plan: ResearchPlan,
+                                  status: str, report: ResearchReport | None) -> None:
+    """Tell the run's conversation (session memory) how the paused run ended."""
+    if state.get("session_id"):
+        await record_turn(open_session(settings, state["session_id"]), run_id=run_id, question=question,
+                          main_question=plan.main_question, status=status, report=report)
 
 
 async def resume_run(run_id: str, *, settings: Settings | None = None, store: Store | None = None,
@@ -133,6 +144,7 @@ async def resume_run(run_id: str, *, settings: Settings | None = None, store: St
         if decision == "rejected":
             store.update_run(run_id, status="rejected")
             emit("rejected_by_human", {"note": review.reviewer_note})
+            await _record_in_conversation(settings, state, run_id, ctx.question, plan, "rejected", None)
             return ResumeResult(run_id, "rejected", decision, None, ctx.final_report, None, state.get("confidence"), ctx)
 
         if decision == "changes_requested":
@@ -158,8 +170,9 @@ async def resume_run(run_id: str, *, settings: Settings | None = None, store: St
 
         with custom_span("Confidence (code)"):
             confidence = compute_confidence(ctx, plan, ctx.final_report, workers)
-        release = release_report(ctx, workers, confidence, on_event=emit)
+        release = release_report(ctx, workers, confidence, on_event=emit, plan=plan)
         save_run_state(ctx, plan=plan, analysis=ctx.analysis, workers=workers, confidence=confidence,
-                       release=release, extra={"resumed_at": time.time()})
+                       release=release, extra={"resumed_at": time.time(), "memory_commit": release.memory_commit})
+        await _record_in_conversation(settings, state, run_id, ctx.question, plan, release.status, ctx.final_report)
     return ResumeResult(run_id, release.status, decision, release, ctx.final_report, release.final_markdown,
                         confidence, ctx)

@@ -1,0 +1,686 @@
+{
+  "run_id": "run_1e2e915dc3",
+  "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+  "status": "completed",
+  "input_check": {
+    "allowed": true,
+    "category": "valid_research",
+    "reason": "This is a valid business and technology decision-making question regarding startup infrastructure.",
+    "checked_by": "guard_agent",
+    "domain": "technology",
+    "matched": [],
+    "requires_review": false
+  },
+  "output_check": {
+    "passed": true,
+    "checks_run": [
+      "schema",
+      "structure",
+      "citations",
+      "support",
+      "unconfirmed_actions",
+      "links",
+      "injection"
+    ],
+    "issues": []
+  },
+  "gate_reasons": [],
+  "route": {
+    "path": "standard",
+    "requires_review": false,
+    "domains": [],
+    "matched_terms": [],
+    "reason": "no sensitive domain detected"
+  },
+  "plan": {
+    "main_question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "decision_context": "The founding team of a 5-person startup needs to decide whether to integrate managed cloud LLM APIs or host open-source models, balancing limited engineering bandwidth against cost and data control constraints.",
+    "subquestions": [
+      {
+        "id": "sq1",
+        "question": "What are the comparative monthly operational and infrastructure costs of cloud LLM APIs versus self-hosting open-source models for a low-to-medium volume startup?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Clear cost breakdown including API token pricing versus GPU instance rental costs for models like Llama 3.",
+        "search_queries": [
+          "cloud llm api cost comparison",
+          "cost to self host llama 3 gpu",
+          "llm api vs self host cost startup"
+        ]
+      },
+      {
+        "id": "sq2",
+        "question": "What is the engineering effort and maintenance overhead required to deploy and monitor open-source LLMs compared to integrating cloud APIs for a small team?",
+        "type": "technical",
+        "priority": 1,
+        "success_criteria": "Estimation of DevOps hours, tooling required like vLLM or Ollama, and ongoing maintenance burden.",
+        "search_queries": [
+          "self host llm engineering overhead",
+          "vllm vs cloud api maintenance startup",
+          "deploy open source llm effort"
+        ]
+      },
+      {
+        "id": "sq3",
+        "question": "What are the data privacy, security, and compliance implications for a startup handling sensitive user data via cloud APIs versus self-hosted models?",
+        "type": "risk",
+        "priority": 2,
+        "success_criteria": "Comparison of data retention policies of major API providers against complete data ownership with self-hosting.",
+        "search_queries": [
+          "llm api data privacy compliance startup",
+          "self hosted llm data security benefits"
+        ]
+      }
+    ]
+  },
+  "decision": {
+    "assignments": [
+      {
+        "specialist": "market",
+        "subquestion_ids": [
+          "sq1"
+        ]
+      },
+      {
+        "specialist": "technical",
+        "subquestion_ids": [
+          "sq2"
+        ]
+      },
+      {
+        "specialist": "risk",
+        "subquestion_ids": [
+          "sq3"
+        ]
+      }
+    ],
+    "depth": "standard",
+    "rationale": "All three specialists are assigned to their respective core subquestion types to comprehensively evaluate cost, engineering effort, and data risk for the startup."
+  },
+  "assignment_corrections": [],
+  "workers": [
+    {
+      "specialist": "market",
+      "status": "success",
+      "subquestion_ids": [
+        "sq1"
+      ],
+      "evidence_ids": [
+        "ev1",
+        "ev2",
+        "ev3",
+        "ev4",
+        "ev5",
+        "ev6",
+        "ev7",
+        "ev8",
+        "ev9"
+      ],
+      "summaries": {
+        "sq1": "Cloud LLM APIs have zero fixed baseline cost, meaning startups processing low volumes (e.g., 40 million tokens/month) spend under $500/month [ev4, ev5, ev6]. In contrast, self-hosting an open-source model requires rented inference-class GPUs costing roughly $1,100 to $2,900 per month around the clock, excluding storage and networking [ev1]. The financial and total cost of ownership (TCO) break-even point sits between 1 to 3 billion tokens per month; below this threshold, API costs are lower [ev2, ev9]. Furthermore, for small engineering teams, the labor required to keep self-hosted models reliable (0.25 to 0.5 FTE) outweighs compute savings at lower volumes [ev7, ev8]."
+      },
+      "error": null,
+      "started_at": 1791981695.6434908,
+      "finished_at": 1791981758.8379605
+    },
+    {
+      "specialist": "technical",
+      "status": "success",
+      "subquestion_ids": [
+        "sq2"
+      ],
+      "evidence_ids": [
+        "ev10",
+        "ev11",
+        "ev12",
+        "ev13"
+      ],
+      "summaries": {
+        "sq2": "Deploying and maintaining open-source LLMs requires significant engineering effort, taking about three weeks initially [ev10] and consuming 0.25 to 0.5 of a full-time engineer's ongoing bandwidth [ev3]. Small teams often face severe maintenance hurdles, such as driver updates breaking containers [ev11], memory tuning challenges under load [ev12], and unexpected downtime due to lack of on-call rotation [ev11], which can lead teams to revert to cloud APIs [ev13]."
+      },
+      "error": null,
+      "started_at": 1791981695.6434908,
+      "finished_at": 1791981759.836462
+    },
+    {
+      "specialist": "risk",
+      "status": "success",
+      "subquestion_ids": [
+        "sq3"
+      ],
+      "evidence_ids": [
+        "ev14",
+        "ev15",
+        "ev16",
+        "ev17",
+        "ev18",
+        "ev19",
+        "ev20",
+        "ev21",
+        "ev22",
+        "ev23"
+      ],
+      "summaries": {
+        "sq3": "Major cloud API providers do not use business API data for model training by default, though many retain prompts and outputs for up to 30 days for abuse detection [ev19, ev20]. Zero-retention options are available for enterprise customers under data processing agreements [ev21], but personal data still leaves the organization's infrastructure [ev22]. Conversely, self-hosting keeps data entirely within the organization's perimeter [ev23], but transfers full security responsibilities to the team, including verifying model weight supply chains, patching inference servers, securing public endpoints, and maintaining audit logs [ev14, ev15, ev16, ev17]. Neither option eliminates prompt injection risks [ev18]."
+      },
+      "error": null,
+      "started_at": 1791981695.6434908,
+      "finished_at": 1791981760.0483048
+    }
+  ],
+  "timeline": {
+    "wall_seconds": 64.4,
+    "sequential_seconds": 191.8,
+    "speedup": 2.98,
+    "bars": [
+      {
+        "specialist": "market",
+        "start": 0.0,
+        "end": 63.2,
+        "status": "success"
+      },
+      {
+        "specialist": "technical",
+        "start": 0.0,
+        "end": 64.2,
+        "status": "success"
+      },
+      {
+        "specialist": "risk",
+        "start": 0.0,
+        "end": 64.4,
+        "status": "success"
+      }
+    ]
+  },
+  "analysis": {
+    "agreements": [
+      "Hosted APIs are more cost-effective and have lower total cost of ownership than self-hosting for low and moderate token volumes [ev1, ev2, ev3, ev4, ev5, ev6, ev8, ev9].",
+      "Self-hosting language models requires ongoing maintenance effort, engineering overhead, and security responsibilities from the internal team [ev7, ev10, ev13, ev14, ev23]."
+    ],
+    "contradictions": [],
+    "gaps": []
+  },
+  "report": {
+    "title": "Cloud LLM APIs Versus Self-Hosting for a 5-Person Startup",
+    "executive_summary": "A 5-person startup should use cloud LLM APIs rather than self-hosting open-source models. Cloud APIs offer lower total cost of ownership and require zero fixed infrastructure costs while the team searches for product-market fit. Self-hosting introduces significant engineering overhead and maintenance demands that outweigh compute savings until token volumes reach several billion per month.",
+    "findings": [
+      {
+        "statement": "Running a single inference-class GPU on-demand costs $1,100 to $2,900 per month before storage, networking, and monitoring.",
+        "evidence_ids": [
+          "ev1"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "The break-even point for self-hosting versus cloud API pricing falls between 1 and 3 billion tokens per month, below which the GPU sits idle and effective costs exceed APIs.",
+        "evidence_ids": [
+          "ev2",
+          "ev3"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "For early-stage startups processing low to moderate volumes, API spend remains low, such as under $500 monthly for median teams processing 40 million tokens.",
+        "evidence_ids": [
+          "ev4",
+          "ev6"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "APIs provide a pay-as-you-go model with no fixed monthly cost during the search for product-market fit.",
+        "evidence_ids": [
+          "ev5"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Keeping a self-hosted model reliable in production requires 0.25 to 0.5 of a full-time engineer, outweighing compute savings for small teams below several billion tokens per month.",
+        "evidence_ids": [
+          "ev7",
+          "ev8"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Self-hosting requires substantial setup and ongoing maintenance, including initial serving setup, handling out-of-memory crashes, and managing routine updates.",
+        "evidence_ids": [
+          "ev10",
+          "ev11",
+          "ev12",
+          "ev13"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Self-hosting shifts full security responsibilities to the startup, including verifying model weights, patching inference servers, restricting access, and maintaining audit logs.",
+        "evidence_ids": [
+          "ev14",
+          "ev15",
+          "ev16",
+          "ev17",
+          "ev23"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Major hosted providers do not use business API data for training by default and offer data deletion or zero-retention options for eligible customers, although data leaves internal infrastructure.",
+        "evidence_ids": [
+          "ev19",
+          "ev20",
+          "ev21",
+          "ev22"
+        ],
+        "strength": "strong"
+      }
+    ],
+    "contradictions": [],
+    "limitations": [
+      "Evidence focuses primarily on general early-stage startups and academic models rather than industry-specific compliance requirements like HIPAA or GDPR.",
+      "Exact token volume projections for the specific startup are unmeasured."
+    ],
+    "recommendation": "Use cloud LLM APIs now to preserve engineering bandwidth and avoid fixed monthly costs while searching for product-market fit. Revisit self-hosting only when token volume consistently exceeds 1 billion tokens per month and dedicated infrastructure staffing is available.",
+    "impact": "medium"
+  },
+  "invalid_citations": [],
+  "confidence": {
+    "score": 0.73,
+    "coverage": 1.0,
+    "covered_subquestions": "3/3",
+    "source_quality": 0.73,
+    "contradiction_penalty": 0.0,
+    "worker_factor": 1.0,
+    "explanation": "3/3 subquestions covered by usable cited evidence; mean source quality 0.73; 0 contradiction(s); 0 failed/timed-out worker(s)."
+  },
+  "critic": {
+    "verdict": "PASS",
+    "stop_reason": "passed",
+    "best_round": 2,
+    "rounds": [
+      {
+        "round": 1,
+        "verdict": "REVISE",
+        "blocking": 1,
+        "advisory": 0,
+        "issues": [
+          "[blocking] Finding 5 cites 0.9: evidence id does not exist in this run"
+        ],
+        "autofixes": [
+          "Finding 3: strong \u2192 moderate (needs 2+ sources or one with quality \u2265 0.8)",
+          "Finding 4: strong \u2192 moderate (needs 2+ sources or one with quality \u2265 0.8)"
+        ],
+        "support": {
+          "1": "supported",
+          "2": "supported",
+          "3": "supported",
+          "4": "supported",
+          "6": "supported",
+          "7": "supported",
+          "8": "supported"
+        },
+        "retrieval": "hybrid",
+        "judged": 8,
+        "reused": 0,
+        "seconds": 23.51,
+        "revision_instructions": [
+          "Finding 5 cites 0.9, which evidence id does not exist in this run. Replace it with a valid id from \"Valid evidence ids\" or remove the citation (and the finding, if nothing supports it)."
+        ]
+      },
+      {
+        "round": 2,
+        "verdict": "PASS",
+        "blocking": 0,
+        "advisory": 0,
+        "issues": [],
+        "autofixes": [],
+        "support": {
+          "1": "supported",
+          "2": "supported",
+          "3": "supported",
+          "4": "supported",
+          "5": "supported",
+          "6": "supported",
+          "7": "supported",
+          "8": "supported"
+        },
+        "retrieval": "hybrid",
+        "judged": 1,
+        "reused": 7,
+        "seconds": 1.16,
+        "revision_instructions": []
+      }
+    ]
+  },
+  "tool_calls": [
+    {
+      "tool": "memory_lookup",
+      "ok": true,
+      "summary": "0 reused, 0 re-verified, 0 unverifiable, covered: none"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'cloud llm api cost comparison'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'self host llm engineering overhead'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'llm api data privacy compliance startup'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'self hosted llm data security benefits'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src1 https://inference-notes.example/posts/gpu-rental-break-even quality=0.55 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src2 https://northwind-tech-review.example/2026/08/llm-api-pricing-small-teams quality=0.75 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src3 https://applied-systems-institute.example/reports/llm-tco-small-teams quality=0.9 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src4 https://builders-forum.example/t/self-hosted-llm-horror-stories quality=0.3 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src5 https://data-protection-board.example/guidance/hosted-ai-data-handling quality=0.95 injection=False"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src6 https://cyber-readiness-centre.example/guidance/self-hosted-llm-security quality=0.95 injection=False"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev1 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev2 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev3 from src1 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev4 from src2 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev5 from src2 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev6 from src2 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev7 from src3 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev8 from src3 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev9 from src3 (sq1)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 1 claims, 1 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev10 from src1 (sq2)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 2 claims, 2 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src4: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev11 from src4 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev12 from src4 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev13 from src4 (sq2)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src6: 5 claims, 5 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev14 from src6 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev15 from src6 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev16 from src6 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev17 from src6 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev18 from src6 (sq3)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src5: 5 claims, 5 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev19 from src5 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev20 from src5 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev21 from src5 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev22 from src5 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev23 from src5 (sq3)"
+    },
+    {
+      "tool": "compare_sources",
+      "ok": true,
+      "summary": "23 items: 2 agreements, 0 contradictions, 0 dropped (unknown ids)"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Running a single inference-class GPU on-demand costs $1,100 to $2,900 per month '"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'The break-even point for self-hosting versus cloud API pricing falls between 1 a'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'For early-stage startups processing low to moderate volumes, API spend remains l'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'APIs provide a pay-as-you-go model with no fixed monthly cost during the search '"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Keeping a self-hosted model reliable in production requires 0.25 to 0.5 of a ful'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Self-hosting requires substantial setup and ongoing maintenance, including initi'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Self-hosting shifts full security responsibilities to the startup, including ver'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Major hosted providers do not use business API data for training by default and '"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Keeping a self-hosted model reliable in production requires 0.25 to 0.5 of a ful'"
+    },
+    {
+      "tool": "generate_report",
+      "ok": true,
+      "summary": "rendered 9692 chars"
+    }
+  ],
+  "memory": {
+    "lookup": {
+      "enabled": true,
+      "related_reports": [],
+      "candidates": 0,
+      "reused": 0,
+      "reverified": 0,
+      "unverifiable": [],
+      "skipped_reverify_budget": 0,
+      "rejected": [],
+      "coverage": {
+        "sq1": {
+          "items": 0,
+          "sites": 0,
+          "covered": false
+        },
+        "sq2": {
+          "items": 0,
+          "sites": 0,
+          "covered": false
+        },
+        "sq3": {
+          "items": 0,
+          "sites": 0,
+          "covered": false
+        }
+      },
+      "covered_subquestions": [],
+      "retrieval": "none",
+      "items": []
+    },
+    "commit": {
+      "committed": true,
+      "added": 23,
+      "refreshed": 0,
+      "skipped": [],
+      "report_stored": true,
+      "context_facts": [
+        {
+          "key": "team_size",
+          "value": "5",
+          "span": "5-person"
+        }
+      ],
+      "superseded": [],
+      "contested": []
+    }
+  },
+  "session_id": "s_1791981691"
+}

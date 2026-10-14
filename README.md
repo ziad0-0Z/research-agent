@@ -124,6 +124,33 @@ no not-supported evidence, no claimed actions a tool did not confirm, no unknown
 high impact, confidence < 0.6) → human review queue or `generate_report`. A paused run resumes from
 the database in a new process; it passes the output guardrail again and gets a fresh token.
 
+### Memory (Phase 6)
+
+```bat
+python scripts\run_research.py                              :: completed → verified evidence + report remembered
+python scripts\run_research.py --question "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?"
+                                                             :: reuses remembered evidence (trace: 🧠 Memory reuse)
+python scripts\run_research.py --follow-up latest --question "Dig deeper into the cost side of that decision"
+                                                             :: session memory: the Planner sees the previous turn
+python scripts\memory.py stats | list | show MEM_ID | delete MEM_ID | reports | context | purge-expired
+python eval\memory_eval.py                                  :: false reuse, precision/recall of the reuse gate
+```
+
+Two kinds of memory:
+- **Session memory** (`workflows/session.py`, SDK `SQLiteSession` in `data/sessions.db`): follow-ups inside one
+  conversation. Only the Planner gets the history; only released reports (or a status line) are recorded;
+  blocked questions never are.
+- **Long-term memory** (`memory/`, tables in `data/research.db`): verified evidence from **completed** runs only.
+  Reused evidence goes back through `save_evidence` (quote verified again), then the Critic and the output
+  guardrail like any other evidence; the report marks it "reused from memory, last verified …".
+  Stale items (past their TTL) are re-fetched and re-verified in code before reuse; a subquestion that memory
+  already covers (≥ 3 items from ≥ 2 sites) is still researched, at quick depth. Past reports are shown as
+  "related past research" only, never given to an agent. Facts the user stated (team size, budget) are stored
+  with their exact words and shown only.
+
+**Replay note:** remembered evidence changes later prompts. Record and replay with the same `data/research.db`
+(or `MEMORY_MODE=off`). Runs without memory hits and without a session send exactly the prompts they sent before.
+
 ## Layout so far
 
 ```
@@ -132,7 +159,10 @@ src/research_agent/
   llm.py       Gemini/Groq via OpenAI-compatible API, shared rate limiter, retries
   models.py    LLM output models + internal records
   context.py   AppContext passed to tools (run id, store, tool log, review flags)
-  store/db.py  SQLite: runs, sources, evidence, reviews, memory
+  store/db.py  SQLite: runs, sources, evidence, reviews
+  memory/      long-term memory: policy.py (what/how long), store.py (tables), matching.py (word gate + filing
+               by embeddings), lookup.py (reuse + re-verify + coverage), commit.py (completed runs),
+               supersede.py (contradiction rules), user_context.py (stated facts only)
   tracing.py   SDK tracing → local JSONL (+ optional OpenAI dashboard)
   guardrails/  url_safety.py (SSRF/local file blocking), injection.py (detect, sanitize, wrap),
                input.py (regex pre-filter + Guard verdict in code), sdk.py (SDK input_guardrail on the
@@ -144,10 +174,12 @@ src/research_agent/
   rag/         embeddings.py (Ollama → Gemini → none, vector cache), hybrid.py (BM25 + dense, RRF)
   workflows/   router.py (code routing), parallel.py (timeouts, isolation, timeline),
                eval_loop.py (Writer ⇄ Critic), confidence.py (computed confidence), pipeline.py,
-               release.py (output guardrail → token → impact gate), resume.py (review queue + resume)
+               release.py (output guardrail → token → impact gate → memory commit), resume.py (review queue +
+               resume), session.py (follow-ups with SQLiteSession)
 data/corpus/   15 synthetic test pages (see its README)
-data/golden/   retrieval.json (recall@5 test set), guardrails.json (attacks + normal questions)
-eval/          METRICS.md, retrieval_eval.py, guardrail_eval.py
-scripts/       smoke_test.py, check_models.py, phase1_check.py, run_research.py, review.py
+data/golden/   retrieval.json (recall@5 test set), guardrails.json (attacks + normal questions),
+               memory_pairs.json (related questions + reuse gate)
+eval/          METRICS.md, retrieval_eval.py, guardrail_eval.py, memory_eval.py
+scripts/       smoke_test.py, check_models.py, phase1_check.py, run_research.py, review.py, memory.py
 tests/
 ```

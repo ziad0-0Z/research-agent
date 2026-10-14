@@ -187,6 +187,39 @@ async def _fetch_live(url: str, resolve_dns: bool) -> tuple[str, str, date | Non
     return text, title, published
 
 
+@dataclass
+class FetchedPage:
+    text: str
+    title: str
+    published: date | None
+    domain_type: str
+    origin: str
+
+
+class FetchError(ToolError):
+    """A page could not be fetched; `log_summary` is what the caller writes to the tool log."""
+
+    def __init__(self, message: str, log_summary: str):
+        super().__init__(message)
+        self.log_summary = log_summary
+
+
+async def fetch_page(ctx: AppContext, url: str) -> FetchedPage:
+    """The one fetch path (offline corpus first, then live), shared by scrape_page and memory re-verification.
+    The caller checks URL safety first."""
+    page = load_corpus(str(ctx.settings.corpus_dir)).get(url)
+    if page:
+        return FetchedPage(page.text, page.title, page.published, page.domain_type, "offline")
+    if ctx.settings.search_mode == "offline":
+        raise FetchError("page not available in offline mode", f"{url} not in offline corpus")
+    try:
+        text, title, published = await _fetch_live(url, resolve_dns=True)
+    except httpx.HTTPError as exc:
+        raise FetchError(f"could not fetch page ({type(exc).__name__})", f"{url}: {type(exc).__name__}") from exc
+    return FetchedPage(text, title, published, classify_domain(url),
+                       "tavily" if ctx.settings.search_mode == "tavily" else "ddg")
+
+
 async def scrape_page(ctx: AppContext, url: str) -> dict:
     """Fetch a page, register it as a Source, return sanitized text for the model."""
     url = (url or "").strip()
@@ -201,19 +234,16 @@ async def scrape_page(ctx: AppContext, url: str) -> dict:
         text = ctx.store.get_source_text(ctx.run_id, existing.id) or ""
         return _scrape_payload(existing, text, cached=True)
 
-    page = load_corpus(str(ctx.settings.corpus_dir)).get(url)
-    if page:
-        text, title, published, domain_type, origin = page.text, page.title, page.published, page.domain_type, "offline"
-    elif ctx.settings.search_mode == "offline":
-        ctx.log_tool("scrape_page", False, f"{url} not in offline corpus")
-        raise ToolError("page not available in offline mode")
-    else:
-        try:
-            text, title, published = await _fetch_live(url, resolve)
-        except httpx.HTTPError as exc:
-            ctx.log_tool("scrape_page", False, f"{url}: {type(exc).__name__}")
-            raise ToolError(f"could not fetch page ({type(exc).__name__})") from exc
-        domain_type, origin = classify_domain(url), ("tavily" if ctx.settings.search_mode == "tavily" else "ddg")
+    try:
+        fetched = await fetch_page(ctx, url)
+    except FetchError as exc:
+        ctx.log_tool("scrape_page", False, exc.log_summary)
+        raise
+    text, title, published = fetched.text, fetched.title, fetched.published
+    domain_type, origin = fetched.domain_type, fetched.origin
+    existing = ctx.store.find_source_by_url(ctx.run_id, url)  # another worker saved it while we downloaded
+    if existing:
+        return _scrape_payload(existing, ctx.store.get_source_text(ctx.run_id, existing.id) or "", cached=True)
 
     if len(text.strip()) < 200:
         ctx.log_tool("scrape_page", False, f"{url}: no usable text")

@@ -43,6 +43,19 @@ def _int(name: str, default: int, minimum: int = 1) -> int:
     return value
 
 
+def _float(name: str, default: float, low: float = 0.0, high: float = 1.0) -> float:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ConfigError(f"{name} must be a number, got {raw!r}") from exc
+    if not low <= value <= high:
+        raise ConfigError(f"{name} must be between {low} and {high}, got {value}")
+    return value
+
+
 def _choice(name: str, default: str, allowed: tuple[str, ...]) -> str:
     value = os.getenv(name, default).strip().lower() or default
     if value not in allowed:
@@ -84,6 +97,20 @@ class Settings:
     embed_mode: str = "auto"  # auto | ollama | gemini | off
     gemini_embed_model: str = "gemini-embedding-001"
     embed_timeout_seconds: int = 30
+    # Long-term memory (Phase 6). Only completed runs write; reused evidence passes every check again.
+    memory_mode: str = "on"  # on | read_only | off
+    memory_ttl_days: tuple[tuple[str, int], ...] = (
+        ("pricing", 30), ("market", 90), ("risk", 90), ("technical", 180))
+    memory_similarity_threshold: float = 0.4   # related past reports (shown, never sent to an agent)
+    memory_min_match: float = 0.4              # IDF-weighted share of a subquestion's words an item must contain
+    memory_max_reuse_per_subquestion: int = 4
+    memory_coverage_min_items: int = 3
+    memory_coverage_min_sources: int = 2
+    memory_max_reverify: int = 10
+
+    def memory_ttl(self, claim_type: str) -> int:
+        table = dict(self.memory_ttl_days)
+        return table.get(claim_type, min(table.values()))
 
     # ---- derived helpers ----
     @property
@@ -198,4 +225,15 @@ def load_settings() -> Settings:
         embed_mode=_choice("EMBED_MODE", "auto", ("auto", "ollama", "gemini", "off")),
         gemini_embed_model=os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001").strip(),
         embed_timeout_seconds=_int("EMBED_TIMEOUT_SECONDS", 30),
+        memory_mode=_choice("MEMORY_MODE", "on", ("on", "read_only", "off")),
+        memory_ttl_days=(
+            ("pricing", _int("MEMORY_TTL_PRICING", 30)), ("market", _int("MEMORY_TTL_MARKET", 90)),
+            ("risk", _int("MEMORY_TTL_RISK", 90)), ("technical", _int("MEMORY_TTL_TECHNICAL", 180)),
+        ),
+        memory_similarity_threshold=_float("MEMORY_SIMILARITY_THRESHOLD", 0.4),
+        memory_min_match=_float("MEMORY_MIN_MATCH", 0.4),
+        memory_max_reuse_per_subquestion=_int("MEMORY_MAX_REUSE_PER_SUBQUESTION", 4),
+        memory_coverage_min_items=_int("MEMORY_COVERAGE_MIN_ITEMS", 3),
+        memory_coverage_min_sources=_int("MEMORY_COVERAGE_MIN_SOURCES", 2),
+        memory_max_reverify=_int("MEMORY_MAX_REVERIFY", 10, minimum=0),
     )

@@ -6,6 +6,7 @@ networks, cloud metadata endpoints, odd ports and credentials in URLs.
 from __future__ import annotations
 
 import ipaddress
+import re
 import socket
 from dataclasses import dataclass
 from urllib.parse import urlsplit
@@ -25,14 +26,20 @@ class UrlCheck:
 
 
 def _ip_is_blocked(ip: ipaddress._BaseAddress) -> bool:
-    return (
-        ip.is_private
-        or ip.is_loopback
-        or ip.is_link_local  # includes 169.254.169.254 cloud metadata
-        or ip.is_multicast
-        or ip.is_reserved
-        or ip.is_unspecified
-    )
+    # Anything not publicly routable: private, loopback, link-local (169.254.169.254 cloud metadata),
+    # carrier-grade NAT (100.64/10), documentation, reserved, multicast, unspecified.
+    mapped = getattr(ip, "ipv4_mapped", None)
+    return not (mapped or ip).is_global or ip.is_multicast
+
+
+def _legacy_ipv4(host: str) -> ipaddress.IPv4Address | None:
+    """Short, octal and hex IPv4 forms that resolvers accept: 127.1, 0177.0.0.1, 0x7f.0.0.1, 2130706433."""
+    if not re.fullmatch(r"(0x[0-9a-f]+|[0-9]+)(\.(0x[0-9a-f]+|[0-9]+)){0,3}", host):
+        return None
+    try:
+        return ipaddress.IPv4Address(socket.inet_aton(host))
+    except OSError:
+        return None
 
 
 def check_url(url: str, *, resolve_dns: bool = False) -> UrlCheck:
@@ -69,7 +76,7 @@ def check_url(url: str, *, resolve_dns: bool = False) -> UrlCheck:
     try:
         ip = ipaddress.ip_address(host)
     except ValueError:
-        ip = None
+        ip = _legacy_ipv4(host)
     if ip is not None:
         if _ip_is_blocked(ip):
             return UrlCheck(False, f"private or reserved address {ip} not allowed", host)

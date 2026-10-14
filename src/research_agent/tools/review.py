@@ -73,5 +73,8 @@ def render_markdown(ctx: AppContext) -> str:
             continue
         ev, src = det["evidence"], det["source"]
         quote = ev.quote.replace("|", "\\|")
-        lines.append(f"| {eid} | “{quote}” | [{src.title}]({src.url}) · {src.domain_type} · quality {src.quality_score} |")
+        reuse = ctx.memory_reuse.get(eid)
+        mem = (f" · reused from memory, last verified {reuse['last_verified_at'][:10]}" if reuse else "")
+        lines.append(f"| {eid} | “{quote}” | [{src.title}]({src.url}) · {src.domain_type} · "
+                     f"quality {src.quality_score}{mem} |")
     return "\n".join(lines)

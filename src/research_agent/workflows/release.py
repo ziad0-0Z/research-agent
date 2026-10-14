@@ -7,6 +7,7 @@
                                        high impact · confidence < threshold   → human review
       → paused_for_review              persisted; resume after a human decides
         or generate_report(token)      → completed
+      → [CODE] memory commit           completed runs only: verified evidence + the released report
 
 Used by the pipeline and by resume, so a resumed run passes exactly the same checks again.
 """
@@ -21,7 +22,8 @@ from agents import custom_span, guardrail_span
 
 from ..context import AppContext
 from ..guardrails.output import OutputCheck, check_output
-from ..models import HumanReview, ResearchReport, WorkerFindings
+from ..memory import commit_completed_run
+from ..models import HumanReview, ResearchPlan, ResearchReport, WorkerFindings
 from ..tools import review as review_tools
 
 ReleaseStatus = Literal["completed", "paused_for_review", "rejected_by_guardrail"]
@@ -35,6 +37,7 @@ class Release:
     gate_reasons: list[str] = field(default_factory=list)
     final_markdown: str | None = None
     review: HumanReview | None = None
+    memory_commit: dict | None = None
 
 
 def impact_gate(ctx: AppContext, report: ResearchReport, confidence: dict) -> list[str]:
@@ -59,7 +62,7 @@ def final_header(ctx: AppContext, confidence: dict, review: HumanReview | None) 
 
 
 def release_report(ctx: AppContext, workers: list[WorkerFindings], confidence: dict,
-                   on_event: EventCallback | None = None) -> Release:
+                   on_event: EventCallback | None = None, plan: ResearchPlan | None = None) -> Release:
     emit = on_event or (lambda stage, data: None)
     report = ctx.final_report
 
@@ -92,4 +95,13 @@ def release_report(ctx: AppContext, workers: list[WorkerFindings], confidence: d
     out = review_tools.generate_report(ctx, token)  # protected action: token + approval checked again inside
     markdown = final_header(ctx, confidence, review) + out["markdown"]
     emit("completed", {"chars": len(markdown)})
-    return Release("completed", check, reasons, markdown, review)
+    # The one place long-term memory is written: only here is the run `completed`.
+    # Best effort: the report is already released, so a memory error is reported, never raised.
+    with custom_span("Memory commit (code)"):
+        try:
+            committed = commit_completed_run(ctx, plan=plan, workers=workers, confidence=confidence,
+                                             final_markdown=markdown)
+        except Exception as exc:
+            committed = {"committed": False, "reason": f"memory error ({type(exc).__name__}: {exc})"[:300]}
+    emit("memory_committed", committed)
+    return Release("completed", check, reasons, markdown, review, committed)

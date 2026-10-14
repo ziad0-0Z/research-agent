@@ -1,0 +1,322 @@
+{
+ "related_reports": {
+  "threshold": 0.4,
+  "precision": 1.0,
+  "recall": 0.9,
+  "false_shown": [],
+  "missed": [
+   {
+    "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "b": "Our 5-person team is deciding between hosted LLM APIs and running Llama ourselves, which is better?",
+    "related": true,
+    "similarity": 0.273,
+    "shown": false
+   }
+  ],
+  "rows": [
+   {
+    "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "b": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?",
+    "related": true,
+    "similarity": 0.727,
+    "shown": true
+   },
+   {
+    "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "b": "Our small team is choosing between hosted LLM APIs and self-hosting an open model: which is cheaper?",
+    "related": true,
+    "similarity": 0.6,
+    "shown": true
+   },
+   {
+    "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "b": "Cloud LLM API or self-hosted open-source model for an early-stage startup?",
+    "related": true,
+    "similarity": 0.818,
+    "shown": true
+   },
+   {
+    "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "b": "Should a 20-person company move from cloud LLM APIs to a self-hosted open-source model?",
+    "related": true,
+    "similarity": 0.8,
+    "shown": true
+   },
+   {
+    "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "b": "Our 5-person team is deciding between hosted LLM APIs and running Llama ourselves, which is better?",
+    "related": true,
+    "similarity": 0.273,
+    "shown": false
+   },
+   {
+    "a": "What are the security risks of self-hosting an LLM?",
+    "b": "Which security risks come with hosting our own LLM?",
+    "related": true,
+    "similarity": 0.571,
+    "shown": true
+   },
+   {
+    "a": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?",
+    "b": "pgvector or a dedicated vector database for our RAG product?",
+    "related": true,
+    "similarity": 0.857,
+    "shown": true
+   },
+   {
+    "a": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?",
+    "b": "When does a RAG product outgrow PostgreSQL with pgvector?",
+    "related": true,
+    "similarity": 0.5,
+    "shown": true
+   },
+   {
+    "a": "Should our bank process customer financial data with a self-hosted LLM?",
+    "b": "Can our bank send customer financial data to a hosted LLM API?",
+    "related": true,
+    "similarity": 0.6,
+    "shown": true
+   },
+   {
+    "a": "What does it cost to run an open-weight model on rented GPUs?",
+    "b": "How much do rented GPUs cost for running an open-weight model?",
+    "related": true,
+    "similarity": 0.667,
+    "shown": true
+   },
+   {
+    "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "b": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?",
+    "related": false,
+    "similarity": 0.0,
+    "shown": false
+   },
+   {
+    "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "b": "Which CRM should a 5-person sales team choose?",
+    "related": false,
+    "similarity": 0.0,
+    "shown": false
+   },
+   {
+    "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "b": "Should our startup hire a contractor or a full-time designer?",
+    "related": false,
+    "similarity": 0.071,
+    "shown": false
+   },
+   {
+    "a": "What are the security risks of self-hosting an LLM?",
+    "b": "What are the security risks of using a password manager for a team?",
+    "related": false,
+    "similarity": 0.286,
+    "shown": false
+   },
+   {
+    "a": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?",
+    "b": "Should we use PostgreSQL or MongoDB for an e-commerce backend?",
+    "related": false,
+    "similarity": 0.091,
+    "shown": false
+   },
+   {
+    "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "b": "Should a startup use AWS or Google Cloud for hosting a web app?",
+    "related": false,
+    "similarity": 0.231,
+    "shown": false
+   },
+   {
+    "a": "Should our bank process customer financial data with a self-hosted LLM?",
+    "b": "Should our bank open a new branch in Alexandria?",
+    "related": false,
+    "similarity": 0.083,
+    "shown": false
+   },
+   {
+    "a": "What does it cost to run an open-weight model on rented GPUs?",
+    "b": "What does it cost to rent office space in Cairo?",
+    "related": false,
+    "similarity": 0.2,
+    "shown": false
+   }
+  ]
+ },
+ "reuse_gate": {
+  "min_match": 0.4,
+  "seed_items": 57,
+  "false_reuse_subquestions": [],
+  "false_reuse_items": 0,
+  "precision": 0.741,
+  "recall": 0.7,
+  "rows": [
+   {
+    "id": "u01",
+    "subquestion": "What do hosted LLM APIs cost per month for a small product team?",
+    "related": true,
+    "reused": 9,
+    "from_allowed": 6,
+    "pages": [
+     "p01_api_pricing.md",
+     "p02_gpu_rental_costs.md",
+     "p03_tco_small_teams.md",
+     "p04_self_hosting_always_cheaper.md"
+    ]
+   },
+   {
+    "id": "u02",
+    "subquestion": "How much does renting a GPU cost to self-host an open-weight model?",
+    "related": true,
+    "reused": 4,
+    "from_allowed": 4,
+    "pages": [
+     "p02_gpu_rental_costs.md",
+     "p03_tco_small_teams.md",
+     "p04_self_hosting_always_cheaper.md"
+    ]
+   },
+   {
+    "id": "u03",
+    "subquestion": "What is the total cost of ownership of self-hosting versus APIs for small teams?",
+    "related": true,
+    "reused": 2,
+    "from_allowed": 2,
+    "pages": [
+     "p03_tco_small_teams.md"
+    ]
+   },
+   {
+    "id": "u04",
+    "subquestion": "How close are open-weight models to hosted frontier APIs in quality?",
+    "related": true,
+    "reused": 4,
+    "from_allowed": 3,
+    "pages": [
+     "p03_tco_small_teams.md",
+     "p05_open_model_benchmarks.md"
+    ]
+   },
+   {
+    "id": "u05",
+    "subquestion": "How does latency of a self-hosted model compare with hosted APIs?",
+    "related": true,
+    "reused": 5,
+    "from_allowed": 2,
+    "pages": [
+     "p02_gpu_rental_costs.md",
+     "p03_tco_small_teams.md",
+     "p04_self_hosting_always_cheaper.md",
+     "p06_latency.md"
+    ]
+   },
+   {
+    "id": "u06",
+    "subquestion": "How long do hosted API providers retain prompts and customer data?",
+    "related": true,
+    "reused": 2,
+    "from_allowed": 2,
+    "pages": [
+     "p07_api_data_retention.md"
+    ]
+   },
+   {
+    "id": "u07",
+    "subquestion": "What vendor lock-in risks come with depending on one hosted model provider?",
+    "related": true,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   },
+   {
+    "id": "u08",
+    "subquestion": "What operational failures have teams hit when self-hosting LLMs?",
+    "related": true,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   },
+   {
+    "id": "u09",
+    "subquestion": "What security risks does self-hosting an LLM server create?",
+    "related": true,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   },
+   {
+    "id": "u10",
+    "subquestion": "Which compliance rules apply when sending financial data to model providers?",
+    "related": true,
+    "reused": 1,
+    "from_allowed": 1,
+    "pages": [
+     "p12_financial_data_compliance.md"
+    ]
+   },
+   {
+    "id": "n01",
+    "subquestion": "How does pgvector perform at ten million vectors?",
+    "related": false,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   },
+   {
+    "id": "n02",
+    "subquestion": "When is a dedicated vector database worth its extra operating cost?",
+    "related": false,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   },
+   {
+    "id": "n03",
+    "subquestion": "Which CRM tools do small sales teams prefer and why?",
+    "related": false,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   },
+   {
+    "id": "n04",
+    "subquestion": "What does it cost to rent office space in Cairo for a small company?",
+    "related": false,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   },
+   {
+    "id": "n05",
+    "subquestion": "How do password managers protect shared team credentials?",
+    "related": false,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   },
+   {
+    "id": "n06",
+    "subquestion": "Is PostgreSQL or MongoDB better for an e-commerce product catalogue?",
+    "related": false,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   },
+   {
+    "id": "n07",
+    "subquestion": "How much does a full-time designer cost compared with a contractor?",
+    "related": false,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   },
+   {
+    "id": "n08",
+    "subquestion": "What uptime do AWS and Google Cloud promise for web app hosting?",
+    "related": false,
+    "reused": 0,
+    "from_allowed": 0,
+    "pages": []
+   }
+  ]
+ }
+}

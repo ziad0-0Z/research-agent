@@ -62,7 +62,7 @@ def test_guard_outage_forces_human_review(settings):
 def test_clean_run_completes_with_a_final_report(settings):
     result, events = research(settings, PRIMARY, Store(":memory:"))
     stages = [s for s, _ in events]
-    assert stages[-3:] == ["output_checked", "gate", "completed"]
+    assert stages[-4:] == ["output_checked", "gate", "completed", "memory_committed"]
     assert result.status == "completed" and result.output_check.passed and result.gate_reasons == []
     assert result.final_markdown.startswith("> **Confidence") and "## Evidence appendix" in result.final_markdown
     assert result.ctx.store.get_run(result.run_id)["status"] == "completed"

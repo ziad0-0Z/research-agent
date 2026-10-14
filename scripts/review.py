@@ -73,6 +73,12 @@ def on_event(stage: str, data: dict) -> None:
         print(f"📄 Final report released ({data['chars']} chars)")
     elif stage == "rejected_by_human":
         print("⛔ Rejected by the reviewer: nothing released")
+    elif stage == "memory_committed":
+        if data.get("committed"):
+            print(f"🧠 Long-term memory: +{data['added']} evidence, {data['refreshed']} refreshed, "
+                  f"{len(data['superseded'])} superseded, {len(data['contested'])} contested")
+        else:
+            print(f"🧠 Long-term memory: nothing written ({data.get('reason')})")
 
 
 async def decide_and_resume(store: Store, settings, run_id: str, action: str, note: str) -> int:

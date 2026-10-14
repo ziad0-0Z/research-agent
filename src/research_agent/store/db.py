@@ -1,4 +1,4 @@
-"""SQLite store: runs, sources, evidence, human reviews, long-term memory.
+"""SQLite store: runs, sources, evidence, human reviews. (Long-term memory: memory/store.py, same file.)
 
 Integrity rules live here as well as in the tools, so even a buggy caller
 cannot save evidence for an unknown source or store the same quote twice.
@@ -68,18 +68,6 @@ CREATE TABLE IF NOT EXISTS reviews (
     created_at TEXT NOT NULL,
     decided_at TEXT
 );
-
-CREATE TABLE IF NOT EXISTS memory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind TEXT NOT NULL,
-    ref_id TEXT NOT NULL,
-    text TEXT NOT NULL,
-    claim_type TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    expires_at TEXT,
-    status TEXT NOT NULL DEFAULT 'active',
-    UNIQUE(kind, ref_id)
-);
 """
 
 
@@ -134,6 +122,9 @@ class Store:
             "UPDATE runs SET status=?, state_json=?, updated_at=? WHERE id=?",
             (new_status, new_state, utcnow().isoformat(), run_id),
         )
+
+    def latest_runs(self, limit: int = 20) -> list[sqlite3.Row]:
+        return self._query("SELECT * FROM runs ORDER BY created_at DESC, rowid DESC LIMIT ?", (limit,))
 
     def get_run(self, run_id: str) -> sqlite3.Row | None:
         rows = self._query("SELECT * FROM runs WHERE id=?", (run_id,))

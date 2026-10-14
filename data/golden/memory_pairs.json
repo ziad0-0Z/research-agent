@@ -1,0 +1,262 @@
+{
+ "description": "Memory evaluation. 'questions': past vs new question pairs, related=true when a past report on the first question is worth showing for the second. 'reuse': memory is seeded with every paragraph of the LLM-hosting pages (what researching the primary question can save); each subquestion lists the pages a reused item may come from. Unrelated subquestions must reuse nothing.",
+ "seed_pages": [
+  "p01_api_pricing.md",
+  "p02_gpu_rental_costs.md",
+  "p03_tco_small_teams.md",
+  "p04_self_hosting_always_cheaper.md",
+  "p05_open_model_benchmarks.md",
+  "p06_latency.md",
+  "p07_api_data_retention.md",
+  "p08_vendor_lockin.md",
+  "p09_selfhosting_postmortems.md",
+  "p10_hidden_api_costs.md",
+  "p11_hosting_marketing.md",
+  "p12_financial_data_compliance.md",
+  "p15_selfhosting_security.md"
+ ],
+ "questions": [
+  {
+   "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+   "b": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?",
+   "related": true
+  },
+  {
+   "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+   "b": "Our small team is choosing between hosted LLM APIs and self-hosting an open model: which is cheaper?",
+   "related": true
+  },
+  {
+   "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+   "b": "Cloud LLM API or self-hosted open-source model for an early-stage startup?",
+   "related": true
+  },
+  {
+   "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+   "b": "Should a 20-person company move from cloud LLM APIs to a self-hosted open-source model?",
+   "related": true
+  },
+  {
+   "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+   "b": "Our 5-person team is deciding between hosted LLM APIs and running Llama ourselves, which is better?",
+   "related": true
+  },
+  {
+   "a": "What are the security risks of self-hosting an LLM?",
+   "b": "Which security risks come with hosting our own LLM?",
+   "related": true
+  },
+  {
+   "a": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?",
+   "b": "pgvector or a dedicated vector database for our RAG product?",
+   "related": true
+  },
+  {
+   "a": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?",
+   "b": "When does a RAG product outgrow PostgreSQL with pgvector?",
+   "related": true
+  },
+  {
+   "a": "Should our bank process customer financial data with a self-hosted LLM?",
+   "b": "Can our bank send customer financial data to a hosted LLM API?",
+   "related": true
+  },
+  {
+   "a": "What does it cost to run an open-weight model on rented GPUs?",
+   "b": "How much do rented GPUs cost for running an open-weight model?",
+   "related": true
+  },
+  {
+   "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+   "b": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?",
+   "related": false
+  },
+  {
+   "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+   "b": "Which CRM should a 5-person sales team choose?",
+   "related": false
+  },
+  {
+   "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+   "b": "Should our startup hire a contractor or a full-time designer?",
+   "related": false
+  },
+  {
+   "a": "What are the security risks of self-hosting an LLM?",
+   "b": "What are the security risks of using a password manager for a team?",
+   "related": false
+  },
+  {
+   "a": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?",
+   "b": "Should we use PostgreSQL or MongoDB for an e-commerce backend?",
+   "related": false
+  },
+  {
+   "a": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+   "b": "Should a startup use AWS or Google Cloud for hosting a web app?",
+   "related": false
+  },
+  {
+   "a": "Should our bank process customer financial data with a self-hosted LLM?",
+   "b": "Should our bank open a new branch in Alexandria?",
+   "related": false
+  },
+  {
+   "a": "What does it cost to run an open-weight model on rented GPUs?",
+   "b": "What does it cost to rent office space in Cairo?",
+   "related": false
+  }
+ ],
+ "reuse": [
+  {
+   "id": "u01",
+   "subquestion": "What do hosted LLM APIs cost per month for a small product team?",
+   "allowed": [
+    "p01_api_pricing.md",
+    "p03_tco_small_teams.md",
+    "p10_hidden_api_costs.md",
+    "p11_hosting_marketing.md",
+    "p04_self_hosting_always_cheaper.md"
+   ],
+   "related": true
+  },
+  {
+   "id": "u02",
+   "subquestion": "How much does renting a GPU cost to self-host an open-weight model?",
+   "allowed": [
+    "p02_gpu_rental_costs.md",
+    "p03_tco_small_teams.md",
+    "p04_self_hosting_always_cheaper.md",
+    "p11_hosting_marketing.md"
+   ],
+   "related": true
+  },
+  {
+   "id": "u03",
+   "subquestion": "What is the total cost of ownership of self-hosting versus APIs for small teams?",
+   "allowed": [
+    "p03_tco_small_teams.md",
+    "p02_gpu_rental_costs.md",
+    "p01_api_pricing.md",
+    "p04_self_hosting_always_cheaper.md",
+    "p09_selfhosting_postmortems.md",
+    "p10_hidden_api_costs.md",
+    "p11_hosting_marketing.md"
+   ],
+   "related": true
+  },
+  {
+   "id": "u04",
+   "subquestion": "How close are open-weight models to hosted frontier APIs in quality?",
+   "allowed": [
+    "p05_open_model_benchmarks.md",
+    "p06_latency.md",
+    "p01_api_pricing.md"
+   ],
+   "related": true
+  },
+  {
+   "id": "u05",
+   "subquestion": "How does latency of a self-hosted model compare with hosted APIs?",
+   "allowed": [
+    "p06_latency.md",
+    "p05_open_model_benchmarks.md"
+   ],
+   "related": true
+  },
+  {
+   "id": "u06",
+   "subquestion": "How long do hosted API providers retain prompts and customer data?",
+   "allowed": [
+    "p07_api_data_retention.md",
+    "p12_financial_data_compliance.md"
+   ],
+   "related": true
+  },
+  {
+   "id": "u07",
+   "subquestion": "What vendor lock-in risks come with depending on one hosted model provider?",
+   "allowed": [
+    "p08_vendor_lockin.md",
+    "p10_hidden_api_costs.md"
+   ],
+   "related": true
+  },
+  {
+   "id": "u08",
+   "subquestion": "What operational failures have teams hit when self-hosting LLMs?",
+   "allowed": [
+    "p09_selfhosting_postmortems.md",
+    "p15_selfhosting_security.md",
+    "p03_tco_small_teams.md"
+   ],
+   "related": true
+  },
+  {
+   "id": "u09",
+   "subquestion": "What security risks does self-hosting an LLM server create?",
+   "allowed": [
+    "p15_selfhosting_security.md",
+    "p09_selfhosting_postmortems.md"
+   ],
+   "related": true
+  },
+  {
+   "id": "u10",
+   "subquestion": "Which compliance rules apply when sending financial data to model providers?",
+   "allowed": [
+    "p12_financial_data_compliance.md",
+    "p07_api_data_retention.md"
+   ],
+   "related": true
+  },
+  {
+   "id": "n01",
+   "subquestion": "How does pgvector perform at ten million vectors?",
+   "allowed": [],
+   "related": false
+  },
+  {
+   "id": "n02",
+   "subquestion": "When is a dedicated vector database worth its extra operating cost?",
+   "allowed": [],
+   "related": false
+  },
+  {
+   "id": "n03",
+   "subquestion": "Which CRM tools do small sales teams prefer and why?",
+   "allowed": [],
+   "related": false
+  },
+  {
+   "id": "n04",
+   "subquestion": "What does it cost to rent office space in Cairo for a small company?",
+   "allowed": [],
+   "related": false
+  },
+  {
+   "id": "n05",
+   "subquestion": "How do password managers protect shared team credentials?",
+   "allowed": [],
+   "related": false
+  },
+  {
+   "id": "n06",
+   "subquestion": "Is PostgreSQL or MongoDB better for an e-commerce product catalogue?",
+   "allowed": [],
+   "related": false
+  },
+  {
+   "id": "n07",
+   "subquestion": "How much does a full-time designer cost compared with a contractor?",
+   "allowed": [],
+   "related": false
+  },
+  {
+   "id": "n08",
+   "subquestion": "What uptime do AWS and Google Cloud promise for web app hosting?",
+   "allowed": [],
+   "related": false
+  }
+ ]
+}

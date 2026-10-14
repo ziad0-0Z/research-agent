@@ -9,6 +9,9 @@
     python scripts/run_research.py --question attack      # demo 7: input guardrail blocks the request
     python scripts/run_research.py --fault fake_citation  # demo 9: output guardrail rejects a fake citation
     python scripts/run_research.py --fault tampered_quote # demo 9b: output guardrail catches an altered quote
+    python scripts/run_research.py --follow-up latest --question "Dig deeper into the cost side"
+                                                          # session memory: continue the latest conversation
+    python scripts/run_research.py --session demo1        # start (or continue) a named conversation
 
 A completed run saves the final report to samples/<run_id>.md; otherwise the draft is saved.
 Paused runs are decided and resumed with scripts/review.py.
@@ -21,6 +24,7 @@ import dataclasses
 import json
 import sys
 import time
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,6 +64,26 @@ def on_event(stage: str, data: dict) -> None:
     elif stage == "routed":
         extra = f" — {', '.join(data['domains'])} ({', '.join(data['matched'])})" if data["domains"] else ""
         print(f"{t} 🐍 Router: {data['path']}{extra}")
+    elif stage == "memory_related":
+        print(f"{t} 🧠 Memory: {len(data['reports'])} related past report(s) (shown only, not sent to any agent)")
+        for r in data["reports"]:
+            print(f"           {r['run_id']} similarity {r['similarity']} · {r['title'][:70]}")
+    elif stage == "memory_reused":
+        print(f"{t} 🧠 Memory reuse: {data['reused']} item(s) re-verified into this run "
+              f"({data['reverified']} re-fetched, {len(data['unverifiable'])} unverifiable, "
+              f"{data['candidates']} remembered) | filed by: {data.get('assignment')} | retrieval: {data['retrieval']}")
+        for sq, c in data["coverage"].items():
+            mark = " → memory-covered" if c["covered"] else ""
+            print(f"           {sq}: {c['items']} item(s) from {c['sites']} site(s){mark}")
+        lowered = {k: v for k, v in data["depths"].items()}
+        print(f"           worker depth: {', '.join(f'{k}={v}' for k, v in lowered.items())}")
+    elif stage == "memory_committed":
+        if data.get("committed"):
+            print(f"{t} 🧠 Long-term memory: +{data['added']} evidence, {data['refreshed']} refreshed, "
+                  f"{len(data['skipped'])} not admitted, {len(data['superseded'])} superseded, "
+                  f"{len(data['contested'])} contested")
+        else:
+            print(f"{t} 🧠 Long-term memory: nothing written ({data.get('reason')})")
     elif stage == "planned":
         print(f"{t} 🤖 Planner: {len(data['subquestions'])} subquestions")
         for sq in data["subquestions"]:
@@ -169,12 +193,31 @@ def save(result: RunResult) -> Path:
         "critic": {"verdict": result.critic.verdict, "stop_reason": result.critic.stop_reason,
                    "best_round": result.critic.best_round, "rounds": result.critic.history} if result.critic else None,
         "tool_calls": [{"tool": r.tool, "ok": r.ok, "summary": r.summary} for r in result.ctx.tool_log],
+        "memory": result.memory, "session_id": result.session_id,
     }
     (out_dir / f"{result.run_id}.json").write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
     return md
 
 
-async def main(question: str, live_search: bool, fault: str | None = None) -> int:
+def resolve_session(store: Store, follow_up: str | None, session: str | None) -> str | None:
+    """--session NAME uses that conversation; --follow-up RUN_ID|latest continues the run's conversation."""
+    if session:
+        return session
+    if not follow_up:
+        return None
+    rows = store.latest_runs(50)
+    if follow_up != "latest":
+        rows = [r for r in rows if r["id"] == follow_up]
+    for r in rows:
+        state = json.loads(r["state_json"] or "{}")
+        if r["status"] != "blocked" and state.get("session_id"):
+            return state["session_id"]
+    raise SystemExit(f"No earlier run with a conversation found for --follow-up {follow_up}. "
+                     "Start one with --session NAME (every run without --session also starts one).")
+
+
+async def main(question: str, live_search: bool, fault: str | None = None, follow_up: str | None = None,
+               session: str | None = None) -> int:
     try:
         settings = load_settings()
         settings.require_llm_key()
@@ -190,9 +233,13 @@ async def main(question: str, live_search: bool, fault: str | None = None) -> in
     fallbacks = " → ".join(f"{p}/{m}" for p, m in settings.llm_fallbacks) or "none"
     print(f"Model: {settings.llm_provider}/{settings.model_name} (fallback: {fallbacks}) | "
           f"search: {settings.search_mode} | rate limit: {settings.llm_requests_per_minute}/min\n")
+    store = Store(settings.db_path)
+    session_id = resolve_session(store, follow_up, session)
+    if session_id:
+        print(f"Conversation: {session_id}" + (" (follow-up)" if follow_up else ""))
     try:
-        result = await run_research(question, settings=settings, store=Store(settings.db_path), on_event=on_event,
-                                    demo_fault=fault)
+        result = await run_research(question, settings=settings, store=store, on_event=on_event,
+                                    demo_fault=fault, session_id=session_id or f"s_{uuid.uuid4().hex[:10]}")
     except InputBlockedError as exc:
         print(f"\n⛔ Blocked by the input guardrail ({exc.check.category}, by {exc.check.stage}): {exc.check.reason}")
         print(f"   No agent ran. Run {exc.run_id} recorded with status 'blocked'.")
@@ -265,7 +312,11 @@ if __name__ == "__main__":
     parser.add_argument("--plant-fault", action="store_true",
                         help="demo scenario 6: add an unsupported claim to the first draft (= --fault unsupported_claim)")
     parser.add_argument("--fault", choices=DEMO_FAULTS, help="test mode: plant a fault (demo scenarios 6 and 9)")
+    parser.add_argument("--follow-up", metavar="RUN_ID|latest",
+                        help="continue the conversation of that run (session memory); give the new question "
+                             "with --question")
+    parser.add_argument("--session", help="conversation id to start or continue")
     args = parser.parse_args()
     q = QUESTIONS.get(args.question, args.question)
     fault = args.fault or ("unsupported_claim" if args.plant_fault else None)
-    raise SystemExit(asyncio.run(main(q, args.live_search, fault)))
+    raise SystemExit(asyncio.run(main(q, args.live_search, fault, args.follow_up, args.session)))

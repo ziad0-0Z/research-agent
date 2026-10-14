@@ -3,9 +3,12 @@
     question
       → [CODE+LLM] input guardrail      regex pre-filter → Guard Agent → verdict in code   (blocks attacks)
       → [CODE]  route_question          sensitive domain? → review required
-      → [LLM]   Planner                 ResearchPlan                    (chain step 1)
+      → [CODE]  memory: related reports similar past questions (shown only, never sent to an agent)
+      → [LLM]   Planner                 ResearchPlan; sees earlier turns when this is a follow-up (session)
       → [LLM]   Research Orchestrator   who researches what, how deep   (orchestrator-workers)
       → [CODE]  validate_assignments    every subquestion assigned once
+      → [CODE]  memory reuse            remembered evidence → save_evidence (re-verified); memory-covered
+                                        subquestions are researched at quick depth
       → [LLM×N] specialists in parallel tools: search → scrape → extract → save   (parallelization)
       → [LLM]   Evidence Analyst        agreements / contradictions     (chain step 2)
       → [LLM]   Writer                  ResearchReport                  (chain step 3)
@@ -13,6 +16,7 @@
       → [CODE]  confidence
       → [CODE]  release: output guardrail → approval token → impact gate
                 → paused_for_review (resume later) | generate_report → completed | rejected_by_guardrail
+      → [CODE]  completed only: commit verified evidence + report to long-term memory (memory/commit.py)
 Every stage runs inside one trace with named spans, and is logged to ctx.stage_log.
 """
 from __future__ import annotations
@@ -38,17 +42,22 @@ from ..tools.evidence import check_citation
 from ..tools.review import render_markdown
 from ..tools.web import ToolError
 from .confidence import compute_confidence
+from ..memory import MemoryStore, lower_depth, related_reports, reuse_for_plan
 from .eval_loop import LoopResult, writer_critic_loop
 from .parallel import WorkerTask, run_parallel, timeline
 from .release import Release, release_report
 from .router import AssignmentPlan, RouteDecision, route_question, validate_assignments
+from .session import follow_up_prompt, open_session, previous_turns, record_turn
 
 RunAgent = Callable[[Agent, str, AppContext, int], Awaitable[Any]]
 EventCallback = Callable[[str, dict], None]
 
 
 async def default_run_agent(agent: Agent, prompt: str, ctx: AppContext, max_turns: int) -> Any:
-    result = await Runner.run(agent, prompt, context=ctx, max_turns=max_turns)
+    # Session memory: only the Planner sees the conversation, and only for a follow-up (a first question
+    # keeps exactly the request it had before sessions existed, so recorded replays still match).
+    session = ctx.session if agent.name == "Planner" and ctx.follow_up else None
+    result = await Runner.run(agent, prompt, context=ctx, max_turns=max_turns, session=session)
     return result.final_output
 
 
@@ -90,6 +99,8 @@ class RunResult:
     output_check: OutputCheck | None = None
     gate_reasons: list[str] = field(default_factory=list)
     final_markdown: str | None = None          # only set when status == "completed"
+    memory: dict | None = None                 # what long-term memory contributed (lookup + commit)
+    session_id: str | None = None
 
 
 def _emit(ctx: AppContext, on_event: EventCallback | None, stage: str, **data: Any) -> None:
@@ -140,134 +151,171 @@ DEMO_FAULTS = ("unsupported_claim", "fake_citation", "tampered_quote")
 
 async def run_research(question: str, *, settings: Settings | None = None, store: Store | None = None,
                        run_agent: RunAgent | None = None, on_event: EventCallback | None = None,
-                       demo_fault: DemoFault | None = None) -> RunResult:
+                       demo_fault: DemoFault | None = None, session_id: str | None = None,
+                       clock: Callable[[], Any] | None = None) -> RunResult:
     question = (question or "").strip()
     if demo_fault and demo_fault not in DEMO_FAULTS:
         raise PipelineError("input", f"unknown demo fault {demo_fault!r}")
     settings = settings or load_settings()
     store = store or Store(settings.db_path)
     run_agent = run_agent or default_run_agent
-    ctx = AppContext(settings=settings, store=store, question=question)
+    ctx = AppContext(settings=settings, store=store, question=question, demo_fault=demo_fault)
+    if clock is not None:
+        ctx.clock = clock
+    turns: list[dict] = []
+    if session_id:
+        ctx.session, ctx.session_id = open_session(settings, session_id), session_id
+        turns = await previous_turns(ctx.session)
+        ctx.follow_up = bool(turns)
+    previous_question = (turns[-1].get("main_question") or turns[-1].get("question")) if turns else None
+    mstore = MemoryStore(store)
 
-    with trace("Research run", group_id=ctx.run_id,
-               metadata={"run_id": ctx.run_id, "question": question[:200]}):
-        # 0. Input guardrail: regex pre-filter (code) → Guard Agent (LLM) → decision (code)
-        with guardrail_span("Input guardrail") as span:
-            check = await check_input(question, lambda prompt: run_agent(_guard(), prompt, ctx, 1))
-            span.span_data.triggered = not check.allowed
-        ctx.input_check = check
-        _emit(ctx, on_event, "input_checked", **check.summary())
-        if not check.allowed:
-            store.update_run(ctx.run_id, status="blocked", state={"input_check": check.summary()})
-            raise InputBlockedError(check, ctx.run_id)
-        if check.requires_review:
-            ctx.flag_review(check.reason)
+    try:
+        with trace("Research run", group_id=ctx.run_id,
+                   metadata={"run_id": ctx.run_id, "question": question[:200]}):
+            # 0. Input guardrail: regex pre-filter (code) → Guard Agent (LLM) → decision (code)
+            with guardrail_span("Input guardrail") as span:
+                check = await check_input(question, lambda prompt: run_agent(_guard(), prompt, ctx, 1),
+                                          previous_question=previous_question)
+                span.span_data.triggered = not check.allowed
+            ctx.input_check = check
+            _emit(ctx, on_event, "input_checked", **check.summary())
+            if not check.allowed:
+                store.update_run(ctx.run_id, status="blocked", state={"input_check": check.summary()})
+                raise InputBlockedError(check, ctx.run_id)
+            if check.requires_review:
+                ctx.flag_review(check.reason)
 
-        # 1. CODE-ORCHESTRATED routing (keywords + the Guard's domain)
-        with custom_span("Router (code)"):
-            route = route_question(question, guard_domain=check.domain,
-                                   sensitive_domains=settings.sensitive_domains)
-            if route.requires_review:
-                ctx.flag_review(route.reason)
-        _emit(ctx, on_event, "routed", path=route.path, domains=route.domains, matched=route.matched_terms)
+            # 1. CODE-ORCHESTRATED routing (keywords + the Guard's domain)
+            with custom_span("Router (code)"):
+                route = route_question(question, guard_domain=check.domain,
+                                       sensitive_domains=settings.sensitive_domains)
+                if route.requires_review:
+                    ctx.flag_review(route.reason)
+            _emit(ctx, on_event, "routed", path=route.path, domains=route.domains, matched=route.matched_terms)
 
-        # 2. Planner (chain step 1)
-        try:
-            plan: ResearchPlan = await run_agent(_planner(), question, ctx, 2)
-        except Exception as exc:
-            raise PipelineError("planner", f"{type(exc).__name__}: {exc}") from exc
-        _emit(ctx, on_event, "planned", subquestions=[sq.model_dump() for sq in plan.subquestions])
+            # 1b. Long-term memory: similar past reports (display only — a past conclusion is not evidence)
+            related = related_reports(ctx, mstore, question) if settings.memory_mode != "off" else []
+            if related:
+                _emit(ctx, on_event, "memory_related", reports=related)
 
-        # 3. LLM-ORCHESTRATED delegation, validated by code
-        try:
-            decision: OrchestrationDecision = await run_agent(
-                _orchestrator(), f"Research plan:\n{plan.model_dump_json(indent=1)}", ctx, 2)
-        except Exception as exc:
-            raise PipelineError("orchestrator", f"{type(exc).__name__}: {exc}") from exc
-        with custom_span("Validate assignments (code)"):
-            assignment = validate_assignments(plan, decision)
-        _emit(ctx, on_event, "delegated", depth=decision.depth, rationale=decision.rationale,
-              assignments={k: [sq.id for sq in v] for k, v in assignment.by_specialist.items()},
-              corrections=assignment.notes)
-
-        # 4. Specialists in parallel
-        tasks = []
-        for kind, sqs in assignment.by_specialist.items():
-            prompt = _researcher_prompt(plan.main_question, plan.decision_context, sqs, decision.depth)
-            agent = _researcher(kind, decision.depth)
-            max_turns = 10 + 2 * len(sqs)  # batched process needs ~4 turns; the rest is slack
-
-            def make_run(agent=agent, prompt=prompt, max_turns=max_turns) -> Awaitable[ResearcherOutput]:
-                return run_agent(agent, prompt, ctx, max_turns)
-
-            tasks.append(WorkerTask(kind, [sq.id for sq in sqs], make_run))
-        _emit(ctx, on_event, "research_started", workers=[t.specialist for t in tasks])
-        with custom_span("Parallel research", data={"workers": [t.specialist for t in tasks]}):
-            workers = await run_parallel(ctx, tasks, timeout=settings.worker_timeout_seconds)
-        tl = timeline(workers)
-        _emit(ctx, on_event, "research_done", workers=[w.model_dump() for w in workers], timeline=tl)
-
-        # 5. Evidence Analyst (chain step 2)
-        n_evidence = len(ctx.store.list_evidence(ctx.run_id))
-        if n_evidence == 0:
-            raise PipelineError("research", "no evidence was saved by any worker")
-        if n_evidence >= 2:
+            # 2. Planner (chain step 1); for a follow-up the SDK session supplies the earlier turns
             try:
-                await analysis_tools.compare_sources(
-                    ctx, run_agent=lambda agent, prompt: run_agent(agent, prompt, ctx, 2))
-            except (ToolError, Exception) as exc:  # analysis failure must not lose the research
-                _emit(ctx, on_event, "analysis_failed", error=f"{type(exc).__name__}: {exc}")
-        analysis = ctx.analysis or EvidenceAnalysis(agreements=[], contradictions=[], gaps=[])
-        _emit(ctx, on_event, "analysed", agreements=len(analysis.agreements),
-              contradictions=len(analysis.contradictions), gaps=analysis.gaps)
+                plan: ResearchPlan = await run_agent(_planner(), follow_up_prompt(question, turns), ctx, 2)
+            except Exception as exc:
+                raise PipelineError("planner", f"{type(exc).__name__}: {exc}") from exc
+            _emit(ctx, on_event, "planned", subquestions=[sq.model_dump() for sq in plan.subquestions])
 
-        # 6. Writer (chain step 3)
-        writer_prompt = _writer_prompt(ctx, plan, analysis, workers)
-        try:
-            report: ResearchReport = await run_agent(_writer(), writer_prompt, ctx, 2)
-        except Exception as exc:
-            raise PipelineError("writer", f"{type(exc).__name__}: {exc}") from exc
-        _emit(ctx, on_event, "drafted", findings=len(report.findings), impact=report.impact)
+            # 3. LLM-ORCHESTRATED delegation, validated by code
+            try:
+                decision: OrchestrationDecision = await run_agent(
+                    _orchestrator(), f"Research plan:\n{plan.model_dump_json(indent=1)}", ctx, 2)
+            except Exception as exc:
+                raise PipelineError("orchestrator", f"{type(exc).__name__}: {exc}") from exc
+            with custom_span("Validate assignments (code)"):
+                assignment = validate_assignments(plan, decision)
+            _emit(ctx, on_event, "delegated", depth=decision.depth, rationale=decision.rationale,
+                  assignments={k: [sq.id for sq in v] for k, v in assignment.by_specialist.items()},
+                  corrections=assignment.notes)
 
-        if demo_fault == "unsupported_claim":
-            report, planted = plant_unsupported_claim(ctx, report)
-            _emit(ctx, on_event, "fault_planted", kind=demo_fault, statement=planted)
+            # 3b. Long-term memory reuse (code): remembered evidence enters through save_evidence (re-verified);
+            #     a worker whose subquestions are all memory-covered still researches, at quick depth.
+            with custom_span("Memory reuse (code)"):
+                memory_use = await reuse_for_plan(ctx, mstore, plan)
+            memory_use.related = related
+            covered = memory_use.covered()
+            depths = {kind: (lower_depth(decision.depth, "quick") if sqs and all(sq.id in covered for sq in sqs)
+                             else decision.depth) for kind, sqs in assignment.by_specialist.items()}
+            if memory_use.enabled and memory_use.candidates:
+                _emit(ctx, on_event, "memory_reused", **{k: v for k, v in memory_use.summary().items()
+                                                         if k != "related_reports"}, depths=depths)
 
-        # 7. Evaluator-optimizer: Writer ⇄ Critic (bounded; verdict decided in code).
-        with custom_span("Writer ⇄ Critic loop", data={"max_rounds": settings.max_critic_rounds}):
-            loop = await writer_critic_loop(
-                ctx, plan, analysis, workers, writer_prompt, report,
-                run_writer=lambda agent, prompt: run_agent(agent, prompt, ctx, 2),
-                run_critic=lambda agent, prompt: run_agent(agent, prompt, ctx, 2),
-                writer_agent=_writer, critic_agent=_critic, max_rounds=settings.max_critic_rounds,
-                on_event=lambda stage, data: _emit(ctx, on_event, stage, **data))
-        report = loop.report
-        if loop.verdict == "FAIL":
-            ctx.flag_review(f"Critic FAIL after {len(loop.rounds)} round(s) ({loop.stop_reason})")
-        _emit(ctx, on_event, "critic_done", verdict=loop.verdict, rounds=len(loop.rounds),
-              stop_reason=loop.stop_reason, best_round=loop.best_round)
-        if demo_fault in ("fake_citation", "tampered_quote"):  # after the Critic: only the output guardrail is left
-            report, planted = (plant_fake_citation(report) if demo_fault == "fake_citation"
-                               else tamper_cited_quote(ctx, report))
-            _emit(ctx, on_event, "fault_planted", kind=demo_fault, statement=planted)
-        invalid = _invalid_citations(ctx, report)
-        ctx.final_report = report
+            # 4. Specialists in parallel
+            tasks = []
+            for kind, sqs in assignment.by_specialist.items():
+                prompt = _researcher_prompt(plan.main_question, plan.decision_context, sqs, depths[kind])
+                agent = _researcher(kind, depths[kind])
+                max_turns = 10 + 2 * len(sqs)  # batched process needs ~4 turns; the rest is slack
 
-        with custom_span("Confidence (code)"):
-            confidence = compute_confidence(ctx, plan, report, workers)
-        _emit(ctx, on_event, "checked", invalid_citations=invalid, confidence=confidence)
+                def make_run(agent=agent, prompt=prompt, max_turns=max_turns) -> Awaitable[ResearcherOutput]:
+                    return run_agent(agent, prompt, ctx, max_turns)
 
-        draft = (f"> **DRAFT** — Critic verdict **{loop.verdict}** after {len(loop.rounds)} round(s) "
-                 f"({loop.stop_reason}).\n\n" + render_markdown(ctx))
+                tasks.append(WorkerTask(kind, [sq.id for sq in sqs], make_run))
+            _emit(ctx, on_event, "research_started", workers=[t.specialist for t in tasks])
+            with custom_span("Parallel research", data={"workers": [t.specialist for t in tasks]}):
+                workers = await run_parallel(ctx, tasks, timeout=settings.worker_timeout_seconds)
+            tl = timeline(workers)
+            _emit(ctx, on_event, "research_done", workers=[w.model_dump() for w in workers], timeline=tl)
 
-        # 8. Release: output guardrail → token → impact gate → review queue or final report (all code)
-        save_run_state(ctx, plan=plan, analysis=analysis, workers=workers, confidence=confidence,
-                       extra={"critic_verdict": loop.verdict, "critic_rounds": len(loop.rounds),
-                              "critic_stop_reason": loop.stop_reason, "route": route.path})
-        release = release_report(ctx, workers, confidence,
-                                 on_event=lambda stage, data: _emit(ctx, on_event, stage, **data))
-        save_run_state(ctx, plan=plan, analysis=analysis, workers=workers, confidence=confidence,
-                       release=release)
+            # 5. Evidence Analyst (chain step 2)
+            n_evidence = len(ctx.store.list_evidence(ctx.run_id))
+            if n_evidence == 0:
+                raise PipelineError("research", "no evidence was saved by any worker")
+            if n_evidence >= 2:
+                try:
+                    await analysis_tools.compare_sources(
+                        ctx, run_agent=lambda agent, prompt: run_agent(agent, prompt, ctx, 2))
+                except (ToolError, Exception) as exc:  # analysis failure must not lose the research
+                    _emit(ctx, on_event, "analysis_failed", error=f"{type(exc).__name__}: {exc}")
+            analysis = ctx.analysis or EvidenceAnalysis(agreements=[], contradictions=[], gaps=[])
+            _emit(ctx, on_event, "analysed", agreements=len(analysis.agreements),
+                  contradictions=len(analysis.contradictions), gaps=analysis.gaps)
+
+            # 6. Writer (chain step 3)
+            writer_prompt = _writer_prompt(ctx, plan, analysis, workers)
+            try:
+                report: ResearchReport = await run_agent(_writer(), writer_prompt, ctx, 2)
+            except Exception as exc:
+                raise PipelineError("writer", f"{type(exc).__name__}: {exc}") from exc
+            _emit(ctx, on_event, "drafted", findings=len(report.findings), impact=report.impact)
+
+            if demo_fault == "unsupported_claim":
+                report, planted = plant_unsupported_claim(ctx, report)
+                _emit(ctx, on_event, "fault_planted", kind=demo_fault, statement=planted)
+
+            # 7. Evaluator-optimizer: Writer ⇄ Critic (bounded; verdict decided in code).
+            with custom_span("Writer ⇄ Critic loop", data={"max_rounds": settings.max_critic_rounds}):
+                loop = await writer_critic_loop(
+                    ctx, plan, analysis, workers, writer_prompt, report,
+                    run_writer=lambda agent, prompt: run_agent(agent, prompt, ctx, 2),
+                    run_critic=lambda agent, prompt: run_agent(agent, prompt, ctx, 2),
+                    writer_agent=_writer, critic_agent=_critic, max_rounds=settings.max_critic_rounds,
+                    on_event=lambda stage, data: _emit(ctx, on_event, stage, **data))
+            report = loop.report
+            if loop.verdict == "FAIL":
+                ctx.flag_review(f"Critic FAIL after {len(loop.rounds)} round(s) ({loop.stop_reason})")
+            _emit(ctx, on_event, "critic_done", verdict=loop.verdict, rounds=len(loop.rounds),
+                  stop_reason=loop.stop_reason, best_round=loop.best_round)
+            if demo_fault in ("fake_citation", "tampered_quote"):  # after the Critic: only the output guardrail is left
+                report, planted = (plant_fake_citation(report) if demo_fault == "fake_citation"
+                                   else tamper_cited_quote(ctx, report))
+                _emit(ctx, on_event, "fault_planted", kind=demo_fault, statement=planted)
+            invalid = _invalid_citations(ctx, report)
+            ctx.final_report = report
+
+            with custom_span("Confidence (code)"):
+                confidence = compute_confidence(ctx, plan, report, workers)
+            _emit(ctx, on_event, "checked", invalid_citations=invalid, confidence=confidence)
+
+            draft = (f"> **DRAFT** — Critic verdict **{loop.verdict}** after {len(loop.rounds)} round(s) "
+                     f"({loop.stop_reason}).\n\n" + render_markdown(ctx))
+
+            # 8. Release: output guardrail → token → impact gate → review queue or final report (all code)
+            save_run_state(ctx, plan=plan, analysis=analysis, workers=workers, confidence=confidence,
+                           extra={"critic_verdict": loop.verdict, "critic_rounds": len(loop.rounds),
+                                  "critic_stop_reason": loop.stop_reason, "route": route.path,
+                                  "memory_lookup": memory_use.summary(), "worker_depths": depths})
+            release = release_report(ctx, workers, confidence, plan=plan,
+                                     on_event=lambda stage, data: _emit(ctx, on_event, stage, **data))
+            save_run_state(ctx, plan=plan, analysis=analysis, workers=workers, confidence=confidence,
+                           release=release, extra={"memory_commit": release.memory_commit})
+            await record_turn(ctx.session, run_id=ctx.run_id, question=question, main_question=plan.main_question,
+                              status=release.status, report=ctx.final_report)
+    except InputBlockedError:
+        raise  # already recorded as "blocked"
+    except Exception as exc:
+        _mark_failed(store, ctx.run_id, exc)
+        raise
 
     return RunResult(
         run_id=ctx.run_id, question=question, route=route, plan=plan, decision=decision, assignment=assignment,
@@ -275,7 +323,16 @@ async def run_research(question: str, *, settings: Settings | None = None, store
         confidence=confidence, draft_markdown=draft, critic=loop, stage_log=ctx.stage_log, ctx=ctx,
         status=release.status, input_check=check, output_check=release.output_check,
         gate_reasons=release.gate_reasons, final_markdown=release.final_markdown,
+        memory={"lookup": memory_use.summary(), "commit": release.memory_commit}, session_id=ctx.session_id,
     )
+
+
+def _mark_failed(store: Store, run_id: str, exc: Exception) -> None:
+    """A run that crashed must not stay "running" forever: record where and why it stopped."""
+    row = store.get_run(run_id)
+    state = json.loads(row["state_json"]) if row and row["state_json"] else {}
+    state["error"] = {"stage": getattr(exc, "stage", "unknown"), "message": f"{type(exc).__name__}: {exc}"[:500]}
+    store.update_run(run_id, status="failed", state=state)
 
 
 def save_run_state(ctx: AppContext, *, plan: ResearchPlan, analysis: EvidenceAnalysis,
@@ -293,6 +350,7 @@ def save_run_state(ctx: AppContext, *, plan: ResearchPlan, analysis: EvidenceAna
         "workers": [w.model_dump() for w in workers], "report": ctx.final_report.model_dump() if ctx.final_report else None,
         "confidence": confidence, "review_reasons": ctx.review_reasons, "updated_at": time.time(),
         "input_check": ctx.input_check.summary() if ctx.input_check else None,
+        "demo_fault": ctx.demo_fault, "memory_reuse": ctx.memory_reuse, "session_id": ctx.session_id,
     })
     if release is not None:
         state.update({"release_status": release.status, "output_check": release.output_check.summary(),

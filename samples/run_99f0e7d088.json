@@ -1,0 +1,621 @@
+{
+  "run_id": "run_99f0e7d088",
+  "question": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?",
+  "status": "paused_for_review",
+  "input_check": {
+    "allowed": true,
+    "category": "valid_research",
+    "reason": "The request asks for a cost and architectural comparison between self-hosting and cloud APIs for startups.",
+    "checked_by": "guard_agent",
+    "domain": "technology",
+    "matched": [],
+    "requires_review": false
+  },
+  "output_check": {
+    "passed": true,
+    "checks_run": [
+      "schema",
+      "structure",
+      "citations",
+      "support",
+      "unconfirmed_actions",
+      "links",
+      "injection"
+    ],
+    "issues": []
+  },
+  "gate_reasons": [
+    "high-impact recommendation (hard to reverse)"
+  ],
+  "route": {
+    "path": "standard",
+    "requires_review": false,
+    "domains": [],
+    "matched_terms": [],
+    "reason": "no sensitive domain detected"
+  },
+  "plan": {
+    "main_question": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?",
+    "decision_context": "Startup leadership evaluating infrastructure and operational costs of running AI models versus paying per-token API fees.",
+    "subquestions": [
+      {
+        "id": "sq1",
+        "question": "What are the infrastructure and hardware costs required to self-host open-source LLMs like Llama 3?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "GPU instance pricing (AWS, GCP, Lambda Labs) and hardware purchase options for typical startup scales.",
+        "search_queries": [
+          "cost to self host open source LLM GPU pricing",
+          "AWS GPU instance cost for LLM inference"
+        ]
+      },
+      {
+        "id": "sq2",
+        "question": "What is the cost per million tokens for leading commercial cloud APIs such as OpenAI GPT-4o and Anthropic Claude 3.5?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Current API pricing models for input and output tokens across major providers.",
+        "search_queries": [
+          "OpenAI API pricing per token",
+          "Anthropic Claude API pricing comparison"
+        ]
+      },
+      {
+        "id": "sq3",
+        "question": "What engineering overhead and labor costs are involved in maintaining and scaling self-hosted LLM infrastructure?",
+        "type": "technical",
+        "priority": 2,
+        "success_criteria": "Estimated DevOps and MLOps engineering time required for deployment, monitoring, and optimization.",
+        "search_queries": [
+          "MLOps engineering cost self host LLM startup",
+          "cost of maintaining self hosted LLM infrastructure"
+        ]
+      },
+      {
+        "id": "sq4",
+        "question": "At what monthly token volume does self-hosting become more cost-effective than using cloud APIs?",
+        "type": "market",
+        "priority": 1,
+        "success_criteria": "Break-even token volume calculations comparing API costs to dedicated GPU hosting.",
+        "search_queries": [
+          "break even point self host LLM vs API",
+          "when is self hosting LLM cheaper than API"
+        ]
+      }
+    ]
+  },
+  "decision": {
+    "assignments": [
+      {
+        "specialist": "market",
+        "subquestion_ids": [
+          "sq1",
+          "sq2",
+          "sq4"
+        ]
+      },
+      {
+        "specialist": "technical",
+        "subquestion_ids": [
+          "sq3"
+        ]
+      }
+    ],
+    "depth": "standard",
+    "rationale": "Market and technical specialists are needed to evaluate both the direct financial costs (hardware, APIs, break-even) and the engineering overhead associated with self-hosting versus commercial APIs."
+  },
+  "assignment_corrections": [],
+  "workers": [
+    {
+      "specialist": "market",
+      "status": "success",
+      "subquestion_ids": [
+        "sq1",
+        "sq2",
+        "sq4"
+      ],
+      "evidence_ids": [
+        "ev8",
+        "ev9",
+        "ev1",
+        "ev10",
+        "ev11",
+        "ev3",
+        "ev4",
+        "ev5",
+        "ev6"
+      ],
+      "summaries": {
+        "sq1": "On-demand rental for a single inference-class GPU ranges from $1.50 to $4.00 per hour across providers [ev8]. A single high-memory GPU can serve 7B-14B parameter models, while 70B-class models require two to four GPUs [ev9].",
+        "sq2": "Small and mid-sized models are priced between $0.10 and $0.60 per million input tokens, while frontier models range from $2 to $15 per million input tokens [ev10]. Output tokens typically cost three to five times more than input tokens [ev11].",
+        "sq4": "No verified evidence was directly extracted for the exact break-even monthly token volume under sq4, though supporting estimates are discussed elsewhere. Open issues: Could not extract specific numeric break-even token volume from the available sources."
+      },
+      "error": null,
+      "started_at": 1791983893.3083158,
+      "finished_at": 1791983960.1907697
+    },
+    {
+      "specialist": "technical",
+      "status": "success",
+      "subquestion_ids": [
+        "sq3"
+      ],
+      "evidence_ids": [
+        "ev2",
+        "ev7",
+        "ev12",
+        "ev13",
+        "ev14"
+      ],
+      "summaries": {
+        "sq3": "Maintaining self-hosted LLM infrastructure requires significant engineering time for setup, monitoring, driver management, and tuning. Initial setup and autoscaling configuration can take several weeks of engineering effort [ev7]. Ongoing maintenance includes handling out-of-memory crashes under load [ev13], debugging driver and container issues causing downtime [ev12], and constant monitoring, which can overwhelm small startup teams without dedicated MLOps staff [ev14]."
+      },
+      "error": null,
+      "started_at": 1791983893.3083158,
+      "finished_at": 1791983958.0578766
+    }
+  ],
+  "timeline": {
+    "wall_seconds": 66.9,
+    "sequential_seconds": 131.6,
+    "speedup": 1.97,
+    "bars": [
+      {
+        "specialist": "market",
+        "start": 0.0,
+        "end": 66.9,
+        "status": "success"
+      },
+      {
+        "specialist": "technical",
+        "start": 0.0,
+        "end": 64.7,
+        "status": "success"
+      }
+    ]
+  },
+  "analysis": {
+    "agreements": [
+      "Self-hosting a mid-sized model has a break-even point compared to APIs between 1 and 3 billion tokens per month [ev3, ev4, ev5, ev6]."
+    ],
+    "contradictions": [],
+    "gaps": []
+  },
+  "report": {
+    "title": "Cost Evaluation: Self-Hosting Open-Source LLMs Versus Cloud APIs for Startups",
+    "executive_summary": "For startups with low to moderate token volumes, cloud APIs offer a lower total cost of ownership than self-hosting. Self-hosting open-source LLMs becomes more cost-effective only when monthly token volume reaches a break-even threshold between 1 and 3 billion tokens. This financial tipping point depends heavily on factoring in ongoing engineering labor costs for deployment, monitoring, and maintenance.",
+    "findings": [
+      {
+        "statement": "Running a single inference-class GPU around the clock on-demand costs roughly $1,100 to $2,900 per month before storage, networking, and monitoring, with hourly rates ranging from $1.50 to $4.00.",
+        "evidence_ids": [
+          "ev1",
+          "ev8"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "A single high-memory GPU comfortably serves a 7 to 14B parameter model, whereas 70B-class models require two to four GPUs, multiplying monthly costs.",
+        "evidence_ids": [
+          "ev9"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Frontier model APIs are priced between $2 and $15 per million input tokens, with output tokens typically costing three to five times more than input tokens.",
+        "evidence_ids": [
+          "ev10",
+          "ev11"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "Keeping a self-hosted model reliable in production for organizations with fewer than ten engineers requires between 0.25 and 0.5 of a full-time engineer on an ongoing basis.",
+        "evidence_ids": [
+          "ev2"
+        ],
+        "strength": "strong"
+      },
+      {
+        "statement": "Initial setup of serving, autoscaling, monitoring, and upgrades takes about three weeks of engineering time.",
+        "evidence_ids": [
+          "ev7"
+        ],
+        "strength": "moderate"
+      },
+      {
+        "statement": "The break-even point for self-hosting a mid-sized model compared to cloud API prices falls between 1 and 3 billion tokens per month.",
+        "evidence_ids": [
+          "ev3",
+          "ev4",
+          "ev5",
+          "ev6"
+        ],
+        "strength": "strong"
+      }
+    ],
+    "contradictions": [],
+    "limitations": [
+      "Evidence relies primarily on general blogs, academic modeling for small engineering teams, and forum anecdotes, lacking direct proprietary startup internal cost audits.",
+      "Specific networking, storage, and precise multi-region latency overheads are not fully quantified in the provided data."
+    ],
+    "recommendation": "Use commercial cloud APIs if your monthly token volume is below 1 billion tokens. Revisit self-hosting open-source LLMs only when your application scales past 1 to 3 billion tokens per month and you have allocated 0.25 to 0.5 of a full-time engineer for ongoing MLOps maintenance.",
+    "impact": "high"
+  },
+  "invalid_citations": [],
+  "confidence": {
+    "score": 0.73,
+    "coverage": 1.0,
+    "covered_subquestions": "4/4",
+    "source_quality": 0.73,
+    "contradiction_penalty": 0.0,
+    "worker_factor": 1.0,
+    "explanation": "4/4 subquestions covered by usable cited evidence; mean source quality 0.73; 0 contradiction(s); 0 failed/timed-out worker(s)."
+  },
+  "critic": {
+    "verdict": "PASS",
+    "stop_reason": "passed",
+    "best_round": 1,
+    "rounds": [
+      {
+        "round": 1,
+        "verdict": "PASS",
+        "blocking": 0,
+        "advisory": 0,
+        "issues": [],
+        "autofixes": [],
+        "support": {
+          "1": "supported",
+          "2": "supported",
+          "3": "supported",
+          "4": "supported",
+          "5": "supported",
+          "6": "supported"
+        },
+        "retrieval": "hybrid",
+        "judged": 6,
+        "reused": 0,
+        "seconds": 13.31,
+        "revision_instructions": []
+      }
+    ]
+  },
+  "tool_calls": [
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev1 from src1 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev2 from src2 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev3 from src1 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev4 from src2 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev5 from src1 (sq4)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev6 from src2 (sq4)"
+    },
+    {
+      "tool": "memory_lookup",
+      "ok": true,
+      "summary": "6 reused, 0 re-verified, 0 unverifiable, covered: ['sq4']"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'cost to self host open source LLM GPU pricing'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'OpenAI API pricing per token'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'break even point self host LLM vs API'"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'MLOps engineering cost self host LLM startup'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src3 https://northwind-tech-review.example/2026/08/llm-api-pricing-small-teams quality=0.75 injection=False"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 1 claims, 1 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev7 from src1 (sq3)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 2 claims, 2 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 4 claims, 4 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev8 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev9 from src1 (sq1)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src3: 2 claims, 2 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev10 from src3 (sq2)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev11 from src3 (sq2)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src2: 2 claims, 2 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'devops mlops headcount self host llm startup maintenance'"
+    },
+    {
+      "tool": "scrape_page",
+      "ok": true,
+      "summary": "src4 https://builders-forum.example/t/self-hosted-llm-horror-stories quality=0.3 injection=False"
+    },
+    {
+      "tool": "search_web",
+      "ok": true,
+      "summary": "offline: 5 results for 'break-even monthly token volume self-host LLM'"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src4: 3 claims, 3 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev12 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev13 from src4 (sq3)"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": true,
+      "summary": "ev14 from src4 (sq3)"
+    },
+    {
+      "tool": "extract_claims",
+      "ok": true,
+      "summary": "src1: 2 claims, 2 quotes verified"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "save_evidence",
+      "ok": false,
+      "summary": "duplicate: this quote from this source is already saved"
+    },
+    {
+      "tool": "compare_sources",
+      "ok": true,
+      "summary": "14 items: 1 agreements, 0 contradictions, 0 dropped (unknown ids)"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Running a single inference-class GPU around the clock on-demand costs roughly $1'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'A single high-memory GPU comfortably serves a 7 to 14B parameter model, whereas '"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Frontier model APIs are priced between $2 and $15 per million input tokens, with'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Keeping a self-hosted model reliable in production for organizations with fewer '"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'Initial setup of serving, autoscaling, monitoring, and upgrades takes about thre'"
+    },
+    {
+      "tool": "retrieve_evidence",
+      "ok": true,
+      "summary": "3 hits (hybrid) for 'The break-even point for self-hosting a mid-sized model compared to cloud API pr'"
+    },
+    {
+      "tool": "request_human_approval",
+      "ok": true,
+      "summary": "pending: high-impact recommendation (hard to reverse)"
+    }
+  ],
+  "memory": {
+    "lookup": {
+      "enabled": true,
+      "related_reports": [
+        {
+          "run_id": "run_1e2e915dc3",
+          "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+          "title": "Cloud LLM APIs Versus Self-Hosting for a 5-Person Startup",
+          "similarity": 0.727,
+          "confidence": 0.73,
+          "released_at": "2026-10-14T12:44:02.037017+00:00",
+          "review_status": "released"
+        }
+      ],
+      "candidates": 23,
+      "reused": 6,
+      "reverified": 0,
+      "unverifiable": [],
+      "skipped_reverify_budget": 0,
+      "rejected": [],
+      "coverage": {
+        "sq1": {
+          "items": 0,
+          "sites": 0,
+          "covered": false
+        },
+        "sq2": {
+          "items": 1,
+          "sites": 1,
+          "covered": false
+        },
+        "sq3": {
+          "items": 1,
+          "sites": 1,
+          "covered": false
+        },
+        "sq4": {
+          "items": 4,
+          "sites": 2,
+          "covered": true
+        }
+      },
+      "covered_subquestions": [
+        "sq4"
+      ],
+      "retrieval": "hybrid",
+      "assignment": "dense",
+      "items": [
+        {
+          "mem_id": "mc557e6018b",
+          "evidence_id": "ev1",
+          "subquestion_id": "sq2",
+          "source_host": "inference-notes.example",
+          "freshness": "fresh",
+          "last_verified_at": "2026-10-14T12:41:37.272024+00:00",
+          "match": 0.414
+        },
+        {
+          "mem_id": "maf363502ef",
+          "evidence_id": "ev2",
+          "subquestion_id": "sq3",
+          "source_host": "applied-systems-institute.example",
+          "freshness": "fresh",
+          "last_verified_at": "2026-10-14T12:41:37.275646+00:00",
+          "match": 0.494
+        },
+        {
+          "mem_id": "mc60e4cedb8",
+          "evidence_id": "ev3",
+          "subquestion_id": "sq4",
+          "source_host": "inference-notes.example",
+          "freshness": "fresh",
+          "last_verified_at": "2026-10-14T12:41:37.272024+00:00",
+          "match": 0.651
+        },
+        {
+          "mem_id": "m4d4ae049f9",
+          "evidence_id": "ev4",
+          "subquestion_id": "sq4",
+          "source_host": "applied-systems-institute.example",
+          "freshness": "fresh",
+          "last_verified_at": "2026-10-14T12:41:37.275646+00:00",
+          "match": 0.505
+        },
+        {
+          "mem_id": "m56eafc326a",
+          "evidence_id": "ev5",
+          "subquestion_id": "sq4",
+          "source_host": "inference-notes.example",
+          "freshness": "fresh",
+          "last_verified_at": "2026-10-14T12:41:37.272024+00:00",
+          "match": 0.505
+        },
+        {
+          "mem_id": "m1c76c48565",
+          "evidence_id": "ev6",
+          "subquestion_id": "sq4",
+          "source_host": "applied-systems-institute.example",
+          "freshness": "fresh",
+          "last_verified_at": "2026-10-14T12:41:37.275646+00:00",
+          "match": 0.505
+        }
+      ]
+    },
+    "commit": null
+  },
+  "session_id": "s_1791983883"
+}

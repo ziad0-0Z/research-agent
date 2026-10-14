@@ -10,11 +10,13 @@ import hashlib
 import secrets
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 from .config import Settings
-from .models import EvidenceAnalysis, ResearchReport
+from .models import EvidenceAnalysis, ResearchReport, utcnow
 from .store import Store
 
 
@@ -40,6 +42,12 @@ class AppContext:
     tool_log: list[ToolCallRecord] = field(default_factory=list)
     stage_log: list[dict[str, Any]] = field(default_factory=list)
     input_check: Any = None  # guardrails.input.InputCheck, set by the pipeline before planning
+    demo_fault: str | None = None  # test-mode fault: such a run never writes to long-term memory
+    clock: Callable[[], datetime] = utcnow  # injected so memory TTL tests control time
+    memory_reuse: dict[str, dict] = field(default_factory=dict)  # run evidence id → memory item it came from
+    session: Any = None  # agents.SQLiteSession for follow-up questions (session memory), or None
+    session_id: str | None = None
+    follow_up: bool = False  # the session already has earlier turns: only then does the Planner get it
     _approval_token: str | None = None
     _approved_hash: str | None = None
     _counters: dict[str, int] = field(default_factory=dict)
