@@ -8,3 +8,6 @@ data/*.db-*
 data/traces/
 data/cache/
 samples/*.tmp
+
+# Private working notes (plans, handoffs) - not published
+private/

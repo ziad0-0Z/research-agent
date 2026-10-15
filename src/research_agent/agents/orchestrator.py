@@ -3,7 +3,7 @@ which subquestions each one gets, and how deep to research.
 
 Python then validates the decision (unknown ids dropped, unassigned
 subquestions given to the matching specialist) and runs the workers in
-parallel — the LLM plans, code executes.
+parallel - the LLM plans, code executes.
 """
 from __future__ import annotations
 

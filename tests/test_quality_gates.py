@@ -1,4 +1,4 @@
-"""Fixes from the video review (Oct 15): reliability honesty, quality gates, memory relevance, UI details."""
+"""Quality gates: reliability honesty, independent sources, memory relevance, UI details."""
 from __future__ import annotations
 
 import asyncio

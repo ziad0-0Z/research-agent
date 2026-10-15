@@ -1,4 +1,4 @@
-"""Phase 9 — evaluation: one place that turns golden sets and recorded runs into measured numbers.
+"""Evaluation: one place that turns golden sets and recorded runs into measured numbers.
 
 Used by eval/run_eval.py (the command line) and by the UI's Evaluation page, so both show the same numbers.
 

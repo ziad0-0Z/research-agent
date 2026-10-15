@@ -1,4 +1,4 @@
-"""Run the full research pipeline (Phases 2-5) from the command line.
+"""Run the full research pipeline from the command line.
 
     python scripts/run_research.py                       # primary demo question, offline corpus
     python scripts/run_research.py --question secondary   # pgvector vs vector DB

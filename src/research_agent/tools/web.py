@@ -134,7 +134,7 @@ SEARCH_OUTAGE_TOTAL = ("risk",)
 
 def _log_search(ctx: AppContext, specialist: str | None, used: str | None, providers: list[str],
                 errors: list[str]) -> None:
-    """Record which provider answered (Phase 7: shown in the report's coverage note and the UI)."""
+    """Record which provider answered (shown in the report's coverage note and the UI)."""
     ctx.search_log.append({
         "specialist": specialist, "provider": used, "first_choice": providers[0],
         "fallback_used": used != providers[0], "failed": used is None,

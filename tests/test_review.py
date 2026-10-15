@@ -1,4 +1,4 @@
-"""Phase 5 exit criteria end to end (fake LLM, real tools, real SQLite file):
+"""Guardrails and human review end to end (fake LLM, real tools, real SQLite file):
 attacks are blocked; a paused run resumes after a human decides, even from a fresh process."""
 import asyncio
 

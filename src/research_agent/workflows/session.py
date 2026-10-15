@@ -1,4 +1,4 @@
-"""Session memory (R10): follow-up questions inside one conversation, with the SDK's SQLiteSession.
+"""Session memory: follow-up questions inside one conversation, with the SDK's SQLiteSession.
 
     run 1  "Should a 5-person startup use cloud APIs or self-host?"   → report
     run 2  "Dig deeper into the cost side"                            → the Planner sees run 1

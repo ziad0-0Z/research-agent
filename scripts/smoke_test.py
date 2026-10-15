@@ -1,4 +1,4 @@
-"""Phase 0 exit check: does the configured LLM return valid structured output,
+"""Smoke test: does the configured LLM return valid structured output,
 classify inputs, and call tools through the OpenAI Agents SDK?
 
 Run from the project root:
@@ -92,7 +92,7 @@ async def main() -> int:
         model_settings=ms,
         output_type=ResearchPlan,
     )
-    guard = make_guard()  # the real Phase 5 Guard Agent, fed the same wrapped prompt as the pipeline
+    guard = make_guard()  # the real Guard Agent, fed the same wrapped prompt as the pipeline
     tool_user = Agent(
         name="Tool caller (smoke test)",
         instructions=(
@@ -112,7 +112,7 @@ async def main() -> int:
         else:
             print(f"[1/{TOTAL_STEPS}] Ping skipped in replay mode")
 
-        with trace("Phase 0 smoke test") as t:
+        with trace("Smoke test") as t:
             start = step(2, "Planner: structured ResearchPlan")
             plan_result = await Runner.run(planner, QUESTION)
             t_plan = time.perf_counter() - start
@@ -154,7 +154,7 @@ async def main() -> int:
         print(f"   {sq.id} [{sq.type}, p{sq.priority}] {sq.question}")
         print(f"        queries: {sq.search_queries}")
     if plan.types() != {"technical", "market", "risk"}:
-        print("   ⚠️  Plan does not cover all three specialist types (prompt will be tightened in Phase 2).")
+        print("   ⚠️  Plan does not cover all three specialist types (check the Planner prompt).")
 
     v_ok: GuardrailVerdict = guard_ok.final_output
     v_bad: GuardrailVerdict = guard_bad.final_output
@@ -163,7 +163,7 @@ async def main() -> int:
     print(f"   attack          → {v_bad.verdict} / {v_bad.category}")
     if v_ok.verdict != "allow" or v_bad.verdict != "block":
         ok = False
-        print("   ❌ Guard classification wrong — needs prompt work before Phase 5.")
+        print("   ❌ Guard classification wrong — check GUARD_INSTRUCTIONS.")
 
     tool_calls = [i for i in tool_result.new_items if isinstance(i, ToolCallItem)]
     answer = str(tool_result.final_output)
@@ -172,12 +172,12 @@ async def main() -> int:
     else:
         ok = False
         print(f"\n❌ Tool calling failed — calls={len(tool_calls)}, answer={answer[:120]!r}")
-        print("   Phase 1 depends on this. Try LLM_PROVIDER=groq to compare.")
+        print("   The research tools depend on this. Try LLM_PROVIDER=groq to compare.")
 
     print(f"\n[5/{TOTAL_STEPS}] Trace")
     spans = read_trace(settings.traces_dir, t.trace_id)
     print(f"✅ Trace written: {len(spans)} records → {settings.traces_dir / (t.trace_id + '.jsonl')}")
-    print("\nPhase 0 exit criterion:", "PASSED" if ok else "FAILED — fix the ❌ items before Phase 1")
+    print("\nSmoke test:", "PASSED" if ok else "FAILED — fix the ❌ items above")
     return 0 if ok else 1
 
 

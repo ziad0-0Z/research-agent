@@ -1,4 +1,4 @@
-"""Inspect and manage long-term memory (Phase 6).
+"""Inspect and manage long-term memory.
 
     python scripts/memory.py stats
     python scripts/memory.py list [--status active|superseded|unverifiable|retired] [--type pricing|market|risk|technical]

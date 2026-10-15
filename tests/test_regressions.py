@@ -1,4 +1,4 @@
-"""Whole-codebase review fixes (2026-10-14): each test fails without its fix."""
+"""Regression tests: each one fails if its fix is reverted."""
 import asyncio
 
 import pytest
@@ -67,7 +67,7 @@ def test_two_workers_scraping_one_page_register_it_once(settings, monkeypatch):
 def test_strength_rule_counts_pages_not_source_rows(settings):
     from research_agent.workflows.eval_loop import apply_strength_rules
     ctx = AppContext(settings=settings, store=Store(":memory:"), question="test question here")
-    for sid in ("src1", "src2"):  # the same page registered twice (as the race used to do)
+    for sid in ("src1", "src2"):  # the same page registered twice
         ctx.store.add_source(ctx.run_id, Source(id=sid, url="https://blog.example/p", title="t", origin="offline",
                                                 quality_score=0.5), text="x" * 300)
     for eid, sid in (("ev1", "src1"), ("ev2", "src2")):
@@ -82,7 +82,7 @@ def test_strength_rule_counts_pages_not_source_rows(settings):
     assert fixed.findings[0].strength == "moderate"
 
 
-# ---- Phase 9 review (2026-10-15) ----
+# ---- run history, search coverage, connections ----
 
 def test_search_records_a_provider_that_answered_with_nothing_usable(settings, monkeypatch):  # noqa: F811
     """Tavily returned only unsafe URLs: the run moved on to DuckDuckGo, and the coverage record must say why."""

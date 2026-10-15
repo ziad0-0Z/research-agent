@@ -1,4 +1,4 @@
-"""Phase 6b: session memory (R10) — follow-up questions with the SDK's SQLiteSession."""
+"""Session memory: follow-up questions with the SDK's SQLiteSession."""
 import asyncio
 
 import pytest

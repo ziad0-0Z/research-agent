@@ -1,4 +1,4 @@
-"""Reliability record (Phase 7): what degraded during a run, measured in code, and how the report says so.
+"""Reliability record: what degraded during a run, measured in code, and how the report says so.
 
     workers      success / partial / failed / timeout per specialist (from saved evidence, parallel.py)
     search       which provider answered each search_web call; fallbacks; searches where every provider failed;

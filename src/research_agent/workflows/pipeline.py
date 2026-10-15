@@ -1,4 +1,4 @@
-"""The research pipeline (Phases 2-5).
+"""The research pipeline.
 
     question
       → [CODE+LLM] input guardrail      regex pre-filter → Guard Agent → verdict in code   (blocks attacks)
@@ -150,7 +150,7 @@ def _writer_prompt(ctx: AppContext, plan: ResearchPlan, analysis: EvidenceAnalys
 #   "tampered_quote"     after the Critic: a cited quote altered in the store after verification (scenario 9)
 DemoFault = str
 #   "search_outage"      Tavily + DuckDuckGo simulated down (offline corpus answers); the risk specialist
-#                        loses every provider → partial report, labelled in its text (scenario 10, Phase 7)
+#                        loses every provider → partial report, labelled in its text
 DEMO_FAULTS = ("unsupported_claim", "fake_citation", "tampered_quote", "search_outage")
 
 
@@ -203,7 +203,7 @@ async def run_research(question: str, *, settings: Settings | None = None, store
                     ctx.flag_review(route.reason)
             _emit(ctx, on_event, "routed", path=route.path, domains=route.domains, matched=route.matched_terms)
 
-            # 1b. Long-term memory: similar past reports (display only — a past conclusion is not evidence)
+            # 1b. Long-term memory: similar past reports (display only - a past conclusion is not evidence)
             related = related_reports(ctx, mstore, question) if settings.memory_mode != "off" else []
             if related:
                 _emit(ctx, on_event, "memory_related", reports=related)

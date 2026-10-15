@@ -1,7 +1,7 @@
-"""Phase 1 exit check: run every tool for real (live LLM, offline corpus by default).
+"""Tools check: run every tool for real (live LLM, offline corpus by default).
 
-    python scripts/phase1_check.py               # offline corpus (deterministic)
-    python scripts/phase1_check.py --live-search # Tavily -> DuckDuckGo -> offline
+    python scripts/tools_check.py               # offline corpus (deterministic)
+    python scripts/tools_check.py --live-search # Tavily -> DuckDuckGo -> offline
 """
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ async def main(live_search: bool) -> int:
     ctx = AppContext(settings=settings, store=Store(":memory:"), question=SUBQUESTION)
     print(f"Provider: {settings.llm_provider} ({settings.model_name}) | search: {settings.search_mode} | run: {ctx.run_id}")
 
-    with trace("Phase 1 tools check", group_id=ctx.run_id):
+    with trace("Tools check", group_id=ctx.run_id):
         step(1, "search_web")
         found = await web.search_web(ctx, "total cost of ownership self-hosting LLM small team engineering time")
         urls = [r["url"] for r in found["results"]]
@@ -152,7 +152,7 @@ async def main(live_search: bool) -> int:
         except ToolError as exc:
             check("scrape localhost blocked", True, str(exc))
         ctx.final_report = ResearchReport(
-            title="Phase 1 check report", executive_summary="Placeholder summary used only to test the token gate.",
+            title="Tools check report", executive_summary="Placeholder summary used only to test the token gate.",
             findings=[Finding(statement="Placeholder finding for the token gate test.", evidence_ids=saved[:1] or ["ev1"],
                               strength="weak")],
             contradictions=[], limitations=[], recommendation="Placeholder recommendation for the gate test.",
@@ -162,14 +162,14 @@ async def main(live_search: bool) -> int:
             check("generate_report without token blocked", False)
         except ToolError as exc:
             check("generate_report without token blocked", True, str(exc)[:60])
-        rv = review.request_human_approval(ctx, ["phase 1 check"])
-        rv2 = review.request_human_approval(ctx, ["phase 1 check"])
+        rv = review.request_human_approval(ctx, ["tools check"])
+        rv2 = review.request_human_approval(ctx, ["tools check"])
         check("human approval idempotent", rv["status"] == "pending" and rv2["already_requested"])
 
     failed = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed")
     print("Tool log:", f"{sum(r.ok for r in ctx.tool_log)} ok / {sum(not r.ok for r in ctx.tool_log)} blocked-or-failed")
-    print("\nPhase 1 exit criterion:", "PASSED" if not failed else "FAILED — see ❌ above")
+    print("\nTools check:", "PASSED" if not failed else "FAILED — see ❌ above")
     return 0 if not failed else 1
 
 

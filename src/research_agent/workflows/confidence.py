@@ -9,7 +9,7 @@ score = coverage × source_quality × (1 − contradiction_penalty) × worker_fa
   report acknowledges contradictions
 - worker_factor: −0.15 per failed or timed-out worker
 - corroboration: 1.0 when the cited evidence comes from at least MIN_INDEPENDENT_SOURCES distinct sites,
-  else 0.75 — one site can be right, but nothing checked it (a repeated quote counts once)
+  else 0.75 - one site can be right, but nothing checked it (a repeated quote counts once)
 
 What the number means: how well this report is backed by the evidence it cites. It is NOT the probability
 that the recommendation is correct; it is not calibrated against outcomes.

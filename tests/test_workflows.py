@@ -258,7 +258,7 @@ def test_critic_loop_fixes_invented_citation(settings):
 
 
 def test_planted_unsupported_claim_is_caught_and_fixed(settings):
-    """Phase 4 exit criterion: a real quote cited for a claim it does not support → REVISE → PASS."""
+    """A real quote cited for a claim it does not support → REVISE → PASS."""
     events = []
     result = run(pipeline.run_research(
         "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",

@@ -26,7 +26,7 @@ def _content_text(content: Any) -> str:
 
 
 def _text(value: Any) -> str:
-    """The text to check: the input string, or — when a session prepends earlier turns — only the
+    """The text to check: the input string, or - when a session prepends earlier turns - only the
     newest user message. Earlier turns were checked when they were new; assistant turns are our own
     released output, and checking the whole history would also trip the length limit."""
     if isinstance(value, str):

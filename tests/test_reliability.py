@@ -1,4 +1,4 @@
-"""Phase 7: reliability record, search outage (scenario 10), trace linking and trace summaries."""
+"""Reliability record, search outage (scenario 10), trace linking and trace summaries."""
 from __future__ import annotations
 
 import asyncio
@@ -45,7 +45,7 @@ def test_search_outage_takes_every_provider_from_the_risk_specialist(settings): 
 
 
 def test_killing_search_still_yields_a_labelled_partial_report(settings):  # noqa: F811
-    """Phase 7 exit criterion."""
+    """Killing every search provider still yields a labelled partial report."""
     store = Store(":memory:")
     result = asyncio.run(pipeline.run_research(Q, settings=settings, store=store, demo_fault="search_outage",
                                                run_agent=make_fake_run_agent(writer_fixes_on_revision=True)))

@@ -70,7 +70,7 @@ def render_markdown(ctx: AppContext) -> str:
     note = search_notice(ctx.reliability) if coverage else None  # only when research actually came up short
     if note:
         coverage.append(note)
-    if coverage:  # Phase 7: a degraded run says so in the report itself
+    if coverage:  # a degraded run says so in the report itself
         lines += ["", "## Research coverage"] + [f"- {x}" for x in coverage]
 
     lines += ["", "## Evidence appendix", "", "| Id | Quote | Source |", "|---|---|---|"]

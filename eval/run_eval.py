@@ -1,4 +1,4 @@
-"""Phase 9 — the whole evaluation in one command. Writes eval/results/*.json and eval/RESULTS.md.
+"""The whole evaluation in one command. Writes eval/results/*.json and eval/RESULTS.md.
 
     python eval\\run_eval.py                 # offline + recorded runs (no API calls, ~2 s)
     python eval\\run_eval.py --live          # + live routing (Guard, Planner, Orchestrator) and claim-support judge

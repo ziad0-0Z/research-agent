@@ -100,7 +100,7 @@ class Settings:
     embed_mode: str = "auto"  # auto | ollama | gemini | off
     gemini_embed_model: str = "gemini-embedding-001"
     embed_timeout_seconds: int = 30
-    # Long-term memory (Phase 6). Only completed runs write; reused evidence passes every check again.
+    # Long-term memory. Only completed runs write; reused evidence passes every check again.
     memory_mode: str = "on"  # on | read_only | off
     memory_ttl_days: tuple[tuple[str, int], ...] = (
         ("pricing", 30), ("market", 90), ("risk", 90), ("technical", 180))

@@ -1,4 +1,4 @@
-"""ResearchPilot — the Gradio application (Phase 8, R20).
+"""ResearchPilot - the Gradio application.
 
 Layout: a persistent sidebar (navigation, new research, recent runs, live status) and one main column with a
 page header and ten pages. Pages are Columns shown one at a time; each page loads its data from ui/data.py when

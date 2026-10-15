@@ -1,4 +1,4 @@
-"""Phase 6: long-term memory (offline, fake LLM, real tools and SQLite).
+"""Long-term memory (offline, fake LLM, real tools and SQLite).
 
 Exit criterion: a second, similar question reuses fresh remembered evidence through the normal
 checks (save_evidence → Critic → output guardrail) and the report says which items came from memory.
@@ -121,7 +121,7 @@ def test_user_context_keeps_exact_words_and_infers_nothing():
     assert {(f["key"], f["value"]) for f in facts} == {("team_size", "5"), ("budget", "$2,000 per month")}
     assert all(f["span"] in "Our 5-person team has a budget of $2,000 per month." for f in facts)
     assert extract_stated_context("Should a small startup self-host an LLM?") == []
-    # A price in the question is not the user's budget (live-review finding).
+    # A price in the question is not the user's budget.
     assert extract_stated_context("Is $0.50 per million tokens cheaper than self-hosting for us?") == []
     assert extract_stated_context("We can spend up to $500/month on LLM APIs; which option?") == [
         {"key": "budget", "value": "$500/month", "span": "can spend up to $500/month"}]
@@ -484,7 +484,7 @@ def test_embeddings_file_an_item_under_the_subquestion_it_means(settings):
     assert dense["mL"].method == "dense" and dense["mL"].subquestion_id == "sq3"
 
 
-# The three excerpt pairs found in the live memory DB (2026-10-14): two are one fact, one is two facts.
+# The three excerpt pairs found in the live memory DB: two are one fact, one is two facts.
 SAME_FACT_CASES = [
     ("A routine driver update broke the serving container on a Friday night and the bot was down for six hours. "
      "Nobody on our team knew the stack well.",
@@ -503,7 +503,7 @@ SAME_FACT_CASES = [
      "Frontier models are priced between $2 and $15 per million input tokens.",
      "Small and mid-sized model APIs are priced between $0.10 and $0.60 per million input tokens.",
      "Small and mid-sized hosted models are priced between $0.10 and $0.60 per million input tokens.",
-     False),  # one quote holds both, words overlap 0.86 — only the numbers tell the facts apart
+     False),  # one quote holds both, words overlap 0.86 - only the numbers tell the facts apart
 ]
 
 

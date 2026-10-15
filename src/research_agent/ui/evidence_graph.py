@@ -1,4 +1,4 @@
-"""Phase 11 — evidence graph: how one report's findings rest on evidence, and that evidence on sources.
+"""Evidence graph: how one report's findings rest on evidence, and that evidence on sources.
 
 Three columns, read left to right as the chain the system enforces:
 

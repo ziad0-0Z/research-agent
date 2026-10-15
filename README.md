@@ -1,19 +1,57 @@
 # Research & Decision Intelligence Agent
 
-Agentic AI Final Project — Project 3.
+A multi-agent research system built with the **OpenAI Agents SDK**. It takes a decision question
+("Should a 5-person startup use cloud LLM APIs or self-host an open-source model?"), splits it into subquestions,
+researches them in parallel across real sources, verifies every quote against the page it came from, and writes a
+decision report in which **every claim is traceable to a verbatim quote in a saved source**.
 
-| Doc | Purpose |
-|---|---|
-| [`docs/PLAN.md`](docs/PLAN.md) | What we build (architecture, agents, tools, phases) |
-| [`docs/EXECUTION_GUIDE.md`](docs/EXECUTION_GUIDE.md) | How we build it (slices, grounding checks, offline/replay, habits) |
-| [`docs/REQUIREMENTS_MATRIX.md`](docs/REQUIREMENTS_MATRIX.md) | Every brief requirement → code → test → demo scenario |
-| [`eval/METRICS.md`](eval/METRICS.md) | Metric definitions and test sets |
+The model decides what to do; Python decides what is allowed. Quotes, citations, routing to human review, confidence
+and release are all checked in code.
 
-> Status: **Phases 0–9 and 11 built** (Phase 10 docs + slides next). Core: input guardrail (regex + Guard Agent), code router, Planner, LLM Orchestrator, 3 parallel specialists, Evidence Analyst, Writer, Critic loop (verdict decided in code), hybrid BM25 + embedding retrieval, computed confidence, output guardrail + report-bound approval token, impact gate, persisted human review queue with resume, long-term + session memory, reliability record and tracing, the ResearchPilot UI, the evaluation suite and the evidence graph.
+![Workflow](docs/diagrams/overview.svg)
+
+## Highlights
+
+- **9 agents**: Guard, Planner, Orchestrator, Technical / Market / Risk researchers, Evidence Analyst, Writer, Critic
+  (plus small claim-extraction and support-judge agents used inside tools).
+- **11 function tools** with strict schemas; three are protected (`scrape_page`, `save_evidence`, `generate_report`).
+- **All five workflow patterns**: prompt chaining, routing (code and model), parallelization, orchestrator-workers,
+  evaluator-optimizer (Writer ⇄ Critic, verdict decided in code, max 3 rounds).
+- **Guardrails**: regex + Guard Agent on input; SSRF-safe fetching and injection wrapping on pages; a pure-Python
+  output guardrail; an approval token bound to the report's hash.
+- **Human in the loop**: sensitive domains, high impact, weak corroboration or low confidence pause the run; a reviewer
+  approves, rejects or requests changes, and the run resumes from the database.
+- **Bonus: RAG** (hybrid BM25 + `bge-m3` embeddings) used by the Critic to find better evidence per finding.
+- **Memory**: session memory (`SQLiteSession`) for follow-ups and long-term memory of verified evidence with TTLs.
+- **Reliability**: model, search and embedding fallback chains; isolated worker failures; labelled partial reports.
+- **Free to run**: Gemini free tier (Groq fallback), Tavily free plan, local Ollama embeddings.
+- **ResearchPilot UI** (Gradio) with live pipeline progress, evidence explorer, review queue, traces and evaluation.
+
+## Results
+
+Measured with `python eval\run_eval.py` (details in [eval/RESULTS.md](eval/RESULTS.md), definitions in
+[eval/METRICS.md](eval/METRICS.md)).
+
+| Metric | Result | Target | How measured |
+|---|---|---|---|
+| Citation validity | 100% (142/142) | 100% | recorded runs |
+| Grounding rate | 100% (66/66 findings) | ≥ 95% | recorded runs |
+| Routing accuracy | 95% (19/20) | ≥ 90% | live |
+| Input guardrail catch rate | 100% (15/15) | 100% | live |
+| False positives | 0% (0/15) | ≤ 5% | live |
+| Retrieval recall@5 | 91% (20/22) | ≥ 85% | offline |
+| Output guardrail catch rate | 100% (5/5 planted faults) | 100% | recorded runs |
+| Claim-support accuracy | 92% (11/12) | ≥ 85% | live |
+| Parallel speedup | 2.38× median | reported | recorded runs |
 
 ## Setup (Windows, cmd)
 
+Requirements: Python 3.11+, a free [Gemini API key](https://aistudio.google.com/), a free
+[Tavily key](https://app.tavily.com/). Optional: a free Groq key (fallback model) and [Ollama](https://ollama.com/)
+for local embeddings.
+
 ```bat
+git clone https://github.com/ziad0-0Z/research-agent.git
 cd research-agent
 python -m venv .venv
 .venv\Scripts\activate.bat
@@ -21,196 +59,117 @@ pip install -r requirements.txt
 copy .env.example .env
 ```
 
-Open `.env` and fill in:
-- `GEMINI_API_KEY` — free key from Google AI Studio
-- `TAVILY_API_KEY` — free key from app.tavily.com
+Open `.env` and set `GEMINI_API_KEY` and `TAVILY_API_KEY` (optionally `GROQ_API_KEY`).
+For hybrid retrieval: `ollama pull bge-m3` (without it the system falls back to BM25 and says so).
 
-## Check that everything works
+On macOS / Linux use `source .venv/bin/activate` and `cp .env.example .env`.
 
-```bat
-python -m pytest -q
-python scripts\smoke_test.py
-```
-
-The smoke test sends the primary demo question to Gemini through the OpenAI Agents SDK and checks that:
-1. it returns a valid `ResearchPlan` (structured output),
-2. the guard classifies a normal question as `allow` and an injection attempt as `block`,
-3. tool calling works (the answer must contain a code only the tool returns),
-4. a trace file is written to `data/traces/`.
-
-If the main model is overloaded (503), rate-limited (429) or times out, each call automatically moves to the next model in `LLM_FALLBACKS` (e.g. `groq:qwen/qwen3.8-27b,gemini:gemini-3.5-flash-lite`); the busy model is skipped for `LLM_FALLBACK_COOLDOWN_SECONDS`. Runs print which models answered and how many switches happened.
-
-### Record once, replay anywhere
+## Check that it works
 
 ```bat
-set LLM_MODE=record
-python scripts\smoke_test.py
-set LLM_MODE=replay
-python scripts\smoke_test.py
+python -m pytest -q                 :: offline, no keys needed (fake model, offline corpus)
+python scripts\smoke_test.py        :: structured output, Guard, tool calling and tracing against the real model
+python scripts\tools_check.py       :: runs all 11 tools once with the real model
 ```
 
-The second run makes no API calls and returns identical results. Use replay for tests and as the demo safety net.
-
-### Phase 1 check (all 11 tools, live LLM, offline corpus)
+## Run it
 
 ```bat
-python scripts\phase1_check.py
-python scripts\phase1_check.py --live-search
-```
-
-### Model speed check
-
-```bat
-python scripts\latency_check.py
-python scripts\latency_check.py --models gemini-3.5-flash-lite gemini-3.1-flash-lite --groq
-```
-
-Times one call per setting (reasoning off / none / low). Pick the fastest working one for `.env`.
-
-### Embeddings for hybrid retrieval (RAG bonus)
-
-Install Ollama from ollama.com, then:
-
-```bat
-ollama pull bge-m3
-ollama list
-```
-
-`EMBED_MODE=auto` tries Ollama `bge-m3` (local, no quota) → Gemini embeddings API → BM25 only.
-Retrieval never fails for lack of embeddings; it reports which method ran (`hybrid` or `bm25`).
-
-```bat
-python eval\retrieval_eval.py
-```
-
-Prints recall@5 for BM25-only and hybrid over the corpus, with every miss listed.
-
-### Full research run (Phases 2–4)
-
-```bat
-python scripts\run_research.py
-python scripts\run_research.py --question secondary
-python scripts\run_research.py --question sensitive
-python scripts\run_research.py --question risk
-python scripts\run_research.py --question "Your own question?"
-python scripts\run_research.py --plant-fault
-```
-
-`--plant-fault` is demo scenario 6: an unsupported claim is added to the first draft, citing a real
-quote that says the opposite. The Critic must flag it (REVISE) and the Writer must remove or fix it.
-
-Reports are saved to `samples/<run_id>.md` (final report if released, otherwise the draft) + a `.json`
-with the plan, workers, timeline, Critic rounds, guardrail results and tool calls.
-
-### Guardrails and human review (Phase 5)
-
-```bat
-python scripts\run_research.py --question attack            :: demo 7: blocked by the input guardrail, no agent runs
-python scripts\run_research.py --question offscope          :: blocked by the Guard Agent
-python scripts\run_research.py --fault fake_citation        :: demo 9: output guardrail rejects a fake citation
-python scripts\run_research.py --fault tampered_quote       :: demo 9b: output guardrail catches an altered quote
-python scripts\run_research.py --question sensitive         :: demo 3 + 11: paused for human review
-python scripts\review.py list
-python scripts\review.py show RUN_ID
-python scripts\review.py approve RUN_ID --note "checked"
-python scripts\review.py changes RUN_ID --note "add the PCI DSS limitation"   :: revise → Critic → back to the queue
-python scripts\review.py reject RUN_ID --note "not enough evidence"
-python eval\guardrail_eval.py --live                        :: catch rate + false positives, regex + Guard Agent
-```
-
-Release path, all in code: output guardrail (schema, citations exist, quotes still match the page,
-no not-supported evidence, no claimed actions a tool did not confirm, no unknown URLs, no injected text)
-→ approval token bound to the report's hash → impact gate (sensitive domain, Critic FAIL, guard outage,
-high impact, confidence < 0.6) → human review queue or `generate_report`. A paused run resumes from
-the database in a new process; it passes the output guardrail again and gets a fresh token.
-
-### Memory (Phase 6)
-
-```bat
-python scripts\run_research.py                              :: completed → verified evidence + report remembered
-python scripts\run_research.py --question "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?"
-                                                             :: reuses remembered evidence (trace: 🧠 Memory reuse)
-python scripts\run_research.py --follow-up latest --question "Dig deeper into the cost side of that decision"
-                                                             :: session memory: the Planner sees the previous turn
-python scripts\memory.py stats | list | show MEM_ID | delete MEM_ID | reports | context | purge-expired
-python eval\memory_eval.py                                  :: false reuse, precision/recall of the reuse gate
-```
-
-Two kinds of memory:
-- **Session memory** (`workflows/session.py`, SDK `SQLiteSession` in `data/sessions.db`): follow-ups inside one
-  conversation. Only the Planner gets the history; only released reports (or a status line) are recorded;
-  blocked questions never are.
-- **Long-term memory** (`memory/`, tables in `data/research.db`): verified evidence from **completed** runs only.
-  Reused evidence goes back through `save_evidence` (quote verified again), then the Critic and the output
-  guardrail like any other evidence; the report marks it "reused from memory, last verified …".
-  Stale items (past their TTL) are re-fetched and re-verified in code before reuse; a subquestion that memory
-  already covers (≥ 3 items from ≥ 2 sites) is still researched, at quick depth. Past reports are shown as
-  "related past research" only, never given to an agent. Facts the user stated (team size, budget) are stored
-  with their exact words and shown only.
-
-**Replay note:** remembered evidence changes later prompts. Record and replay with the same `data/research.db`
-(or `MEMORY_MODE=off`). Runs without memory hits and without a session send exactly the prompts they sent before.
-
-### The app (Phases 7–8)
-
-```cmd
 python app.py
 ```
 
-Open http://127.0.0.1:7860. Pages: Overview, New research (with the demo-scenario list), Research history, Evidence
-explorer, Review queue, Memory, Traces, Evaluation, Settings. Runs started here use the same pipeline as the CLI.
+Open http://127.0.0.1:7860. Choose **New research**, pick a demo scenario or type a question, and watch the
+pipeline rail (square nodes = Python decides, round nodes = the model decides).
 
-Failure recovery demo (scenario 10): `python scripts\run_research.py --fault search_outage`
+Or from the command line:
 
-Each report has an **Evidence graph** tab (Phase 11): sources → verified quotes → findings, line style = how the
-Critic judged each quote, red arcs = contradictions the Evidence Analyst found. Built from the stored run only.
-
-### Evaluation (Phase 9)
-
-```cmd
-python eval\run_eval.py                    :: offline + recorded runs: no API calls, about 2 s
-python eval\run_eval.py --live --limit 5   :: + live routing (Guard, Planner, Orchestrator) and claim-support judge
-python eval\run_eval.py --live             :: all 20 golden questions + 12 claim pairs (~100 model calls)
-python eval\run_eval.py --tests --samples  :: + pytest result, + export released reports to samples\
+```bat
+python scripts\run_research.py                          :: primary question
+python scripts\run_research.py --question secondary     :: pgvector vs a dedicated vector database
+python scripts\run_research.py --question "Your own decision question?"
+python scripts\review.py list                           :: human review queue
+python scripts\review.py approve RUN_ID --note "checked"
 ```
 
-Writes `eval/results/*.json` and `eval/RESULTS.md`; the app's Evaluation page shows the same numbers and the 12
-required scenarios, each linked to the stored run that demonstrates it. Every number says how it was measured:
-**recorded** (research.db), **offline** (golden set + code) or **live** (model calls). Unmeasured = "not measured".
+Reports are saved to `samples\<run_id>.md` with a `.json` holding the plan, workers, timeline, Critic rounds and
+guardrail results.
 
-## Layout so far
+**No network?** Set `SEARCH_MODE=offline` to research the bundled corpus in `data/corpus/`. To make no model calls at
+all, record a run once with `LLM_MODE=record` and play it back with `LLM_MODE=replay`.
+
+## The 12 demo scenarios
+
+| # | Scenario | How to run it |
+|---|---|---|
+| 1 | Happy path | `run_research.py` |
+| 2 | 3+ sequential steps | same run; Plan, Evidence and Report tabs show each step |
+| 3 | Routing | `--question sensitive` (bank + customer financial data → review path) |
+| 4 | Parallelization | primary question; the timeline shows concurrent specialists |
+| 5 | Orchestrator-workers | `--question risk` (only the Risk specialist runs) |
+| 6 | Evaluator rejects, then passes | `--plant-fault` (unsupported claim → REVISE → PASS) |
+| 7 | Input guardrail | `--question attack` |
+| 8 | Tool blocked | app: New research → "Scenario 8: protected tools refuse unsafe calls", or `tests/test_safety.py` |
+| 9 | Output guardrail | `--fault fake_citation` or `--fault tampered_quote` |
+| 10 | Failure recovery | `--fault search_outage` (labelled partial report) |
+| 11 | Human escalation | `--question sensitive`, then the Review queue |
+| 12 | Trace | Traces page, or `data/traces/*.jsonl` |
+
+All of them are also in the **New research** scenario list in the app.
+
+## Evaluation
+
+```bat
+python eval\run_eval.py                     :: offline + recorded metrics, no API calls
+python eval\run_eval.py --live --limit 5    :: adds live routing and claim-support checks on 5 questions
+python eval\run_eval.py --live              :: all 20 golden questions + 12 claim pairs (~100 model calls)
+python eval\retrieval_eval.py               :: recall@5, BM25 vs hybrid
+python eval\guardrail_eval.py --live        :: input guardrail catch rate and false positives
+python eval\memory_eval.py                  :: memory reuse precision and false reuse
+```
+
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | Workflow, patterns, agents, tools, guardrails, memory, with diagrams |
+| [docs/decisions.md](docs/decisions.md) | Design decisions and the reasons behind them |
+| [docs/requirements.md](docs/requirements.md) | Every brief requirement → code → test → demo scenario |
+| [eval/METRICS.md](eval/METRICS.md) | Metric definitions, test sets, measured results |
+| [data/corpus/README.md](data/corpus/README.md) | The offline corpus and its planted test cases |
+
+## Project layout
 
 ```
-src/research_agent/
-  config.py    settings (load_dotenv first), code-level limits
-  llm.py       Gemini/Groq via OpenAI-compatible API, shared rate limiter, retries
-  models.py    LLM output models + internal records
-  context.py   AppContext passed to tools (run id, store, tool log, review flags)
-  store/db.py  SQLite: runs, sources, evidence, reviews
-  memory/      long-term memory: policy.py (what/how long), store.py (tables), matching.py (word gate + filing
-               by embeddings), lookup.py (reuse + re-verify + coverage), commit.py (completed runs),
-               supersede.py (contradiction rules), user_context.py (stated facts only)
-  tracing.py   SDK tracing → local JSONL (+ optional OpenAI dashboard)
-  guardrails/  url_safety.py (SSRF/local file blocking), injection.py (detect, sanitize, wrap),
-               input.py (regex pre-filter + Guard verdict in code), sdk.py (SDK input_guardrail on the
-               Planner), output.py (release checks)
-  tools/       corpus, web (search/validate/scrape), quotes, quality, evidence, analysis, review,
-               registry.py (the 11 function tools)
-  agents/      guard, planner, orchestrator, researchers (factory: technical/market/risk), writer, critic,
-               tool_agents (claim extractor, evidence analyst, support judge)
-  rag/         embeddings.py (Ollama → Gemini → none, vector cache), hybrid.py (BM25 + dense, RRF)
-  workflows/   router.py (code routing), parallel.py (timeouts, isolation, timeline),
-               eval_loop.py (Writer ⇄ Critic), confidence.py (computed confidence), pipeline.py,
-               release.py (output guardrail → token → impact gate → memory commit), resume.py (review queue +
-               resume), session.py (follow-ups with SQLiteSession)
-data/corpus/   15 synthetic test pages (see its README)
-data/golden/   retrieval.json (recall@5 test set), guardrails.json (attacks + normal questions),
-               memory_pairs.json (related questions + reuse gate), questions.json (routing: 20 questions incl.
-               keyword traps), claim_pairs.json (12 real corpus quotes + claims, for the support judge)
-eval/          METRICS.md, RESULTS.md (generated), run_eval.py (everything), retrieval_eval.py, guardrail_eval.py,
-               memory_eval.py
-src/research_agent/evaluation.py   shared metric code (CLI + Evaluation page)
-src/research_agent/ui/             Gradio app; evidence_graph.py (Phase 11)
-scripts/       smoke_test.py, check_models.py, phase1_check.py, run_research.py, review.py, memory.py
-tests/
+app.py                  starts the UI
+src/research_agent/     the package (agents, tools, guardrails, rag, memory, workflows, store, ui)
+scripts/                smoke_test, tools_check, run_research, review, memory, check_models, latency_check
+eval/                   evaluation scripts, METRICS.md, generated RESULTS.md and results/*.json
+data/corpus/            15 offline pages, incl. planted traps (injection, "always cheaper" blog, marketing)
+data/golden/            golden sets for routing, guardrails, retrieval, memory and claim support
+docs/                   architecture, decisions, requirements, diagrams
+samples/                exported reports
+tests/                  pytest suite (offline)
 ```
+
+## Configuration
+
+Everything is in `.env` (see `.env.example` for comments). The most useful switches:
+
+| Variable | Values | Use |
+|---|---|---|
+| `LLM_PROVIDER` | `gemini` · `groq` | main provider |
+| `LLM_FALLBACKS` | `provider:model,...` | tried in order on 503 / 429 / timeout |
+| `LLM_MODE` | `live` · `record` · `replay` | replay = no API calls |
+| `SEARCH_MODE` | `tavily` · `ddg` · `offline` | offline = bundled corpus |
+| `EMBED_MODE` | `auto` · `ollama` · `gemini` · `off` | off = BM25 only |
+| `MEMORY_MODE` | `on` · `read_only` · `off` | long-term memory |
+| `MAX_CRITIC_ROUNDS` | default 3 (hard cap 5) | Writer ⇄ Critic loop |
+| `LLM_REQUESTS_PER_MINUTE` | default 12 | free-tier protection |
+
+## Known limitations
+
+- Free-tier rate limits, not the code, set the run time (a full run takes a few minutes).
+- Confidence describes how well the report is backed by its citations; it is not calibrated against real outcomes.
+- The routing traps in the golden set were written with the keyword list in view.
+- DNS rebinding between the URL check and the HTTP client's own lookup is not covered.
+- Replay recordings change when memory has items; record and replay with the same database or `MEMORY_MODE=off`.

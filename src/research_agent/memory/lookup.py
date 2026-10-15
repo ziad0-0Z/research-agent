@@ -1,6 +1,6 @@
 """Memory lookup: reuse remembered evidence in a new run, without skipping any check.
 
-    [before the Planner]  related_reports()     similar past questions — shown in the trace/UI only,
+    [before the Planner]  related_reports()     similar past questions - shown in the trace/UI only,
                                                 never sent to an agent (a past conclusion is not evidence)
     [after the plan]      reuse_for_plan()
         1. match       each active memory item against each subquestion: IDF-weighted term gate (generic

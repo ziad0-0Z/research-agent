@@ -65,6 +65,6 @@ Input guardrail: `python eval/guardrail_eval.py` (regex only, offline) and `--li
 | Routing, golden questions really run (recorded) | 4/4 | q01, q03, q04, q05 from research.db: route and specialists as expected (q04 security question used risk + technical, no market) |
 | Routing, live (Guard + Planner + Orchestrator) | not run yet | `python eval\run_eval.py --live` (3 model calls per question) |
 | Claim-support judge (live) | not run yet | `python eval\run_eval.py --live` (12 calls) |
-| Output guardrail catch rate (recorded) | 5/5 | 2026-10-15, every stored run with a fault planted after the Critic (fake citation ×3, altered quote ×2) was rejected. Phase 5 runs that predate the stored `demo_fault` field are recognised by their planted id ev999 |
+| Output guardrail catch rate (recorded) | 5/5 | 2026-10-15, every stored run with a fault planted after the Critic (fake citation ×3, altered quote ×2) was rejected. Early runs that predate the stored `demo_fault` field are recognised by their planted id ev999 |
 | Parallel speedup (recorded) | median 2.38× over 12 runs (1.44×–2.91×) | sequential worker time ÷ wall time, from each run's recorded worker start/end |
 | Critic (recorded) | 23 runs, all final PASS, mean 1.17 rounds, 4 needed a revision | includes the planted-claim runs |

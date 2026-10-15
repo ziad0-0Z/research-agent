@@ -1,6 +1,6 @@
-"""Read the local JSONL traces back: find a run's traces and summarise them (Trace page, Phase 7/8).
+"""Read the local JSONL traces back: find a run's traces and summarise them (Traces page).
 
-Runs made after Phase 7 store their trace ids in the run state ("linked"), and new trace files carry the
+Newer runs store their trace ids in the run state ("linked"), and new trace files carry the
 run id as group_id. Older trace files have neither, so they are matched by time: a "Research run" / "Resume
 run" trace whose spans fall inside the run's created..updated window. The UI says which match was used.
 

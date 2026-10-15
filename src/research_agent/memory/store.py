@@ -6,7 +6,7 @@ audit trail, and every memory write goes through this one class.
     memory_evidence   one verified evidence item, keyed by content_hash(url, quote)
     memory_pages      page snapshot the quote was verified against (the output guardrail re-checks it)
     memory_reports    released reports of completed runs (shown as "related past research" only)
-    memory_context    facts the user stated verbatim in a question (team size, budget) — shown only
+    memory_context    facts the user stated verbatim in a question (team size, budget) - shown only
     memory_tombstones items a human deleted: an old run committed again cannot bring them back
 """
 from __future__ import annotations

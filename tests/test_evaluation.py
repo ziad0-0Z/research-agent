@@ -1,4 +1,4 @@
-"""Phase 9: golden sets are sound, routing/claim scoring is honest, recorded metrics come from real runs only."""
+"""Golden sets are sound, routing/claim scoring is honest, recorded metrics come from real runs only."""
 from __future__ import annotations
 
 import asyncio

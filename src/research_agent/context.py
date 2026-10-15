@@ -55,7 +55,7 @@ class AppContext:
     session_id: str | None = None
     follow_up: bool = False  # the session already has earlier turns: only then does the Planner get it
     trace_ids: list[str] = field(default_factory=list)  # SDK traces of this run (pipeline + every resume)
-    search_log: list[dict[str, Any]] = field(default_factory=list)  # one entry per search_web call (Phase 7)
+    search_log: list[dict[str, Any]] = field(default_factory=list)  # one entry per search_web call
     reliability: dict[str, Any] = field(default_factory=dict)  # what degraded in this run (workers, search, LLM)
     _approval_token: str | None = None
     _approved_hash: str | None = None

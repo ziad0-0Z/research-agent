@@ -1,4 +1,4 @@
-"""Phase 8 UI: the read models return real data or None (never invented numbers), HTML is escaped, the app builds."""
+"""UI: the read models return real data or None (never invented numbers), HTML is escaped, the app builds."""
 from __future__ import annotations
 
 import asyncio

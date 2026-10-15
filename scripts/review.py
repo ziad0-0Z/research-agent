@@ -1,4 +1,4 @@
-"""Human review queue from the command line (the Gradio Review tab in Phase 8 calls the same functions).
+"""Human review queue from the command line (the Review queue page in the app calls the same functions).
 
     python scripts/review.py list
     python scripts/review.py show RUN_ID

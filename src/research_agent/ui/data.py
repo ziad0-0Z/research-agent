@@ -29,7 +29,7 @@ STATUS = {
     "rejected_by_guardrail": ("Rejected by guardrail", "bad"),
     "rejected": ("Rejected by reviewer", "muted"),
 }
-LEGACY_STATUSES = ("drafted", "reviewed")  # runs recorded before Phase 5 (kept for the audit trail)
+LEGACY_STATUSES = ("drafted", "reviewed")  # statuses from early runs (kept for the audit trail)
 
 
 def status_meta(status: str) -> tuple[str, str]:
@@ -99,7 +99,7 @@ def demo_fault_of(state: dict) -> str | None:
     fault = state.get("demo_fault") or (state.get("reliability") or {}).get("demo_fault")
     if fault:
         return fault
-    # Runs from Phase 5 (before the fault was stored in the state): the planted fake citation always cites ev999,
+    # Older runs (before the fault was stored in the state): the planted fake citation always cites ev999,
     # an id the pipeline never creates, so a rejection for exactly that id identifies the demo.
     issues = (state.get("output_check") or {}).get("issues") or []
     if issues and all("ev999" in (i.get("message") or "") for i in issues):

@@ -1,7 +1,7 @@
 """Matching remembered evidence to a new plan: relevance gate, then filing. Pure code, no LLM.
 
     gate     IDF-weighted share of a subquestion's words found in the item (MEMORY_MIN_MATCH, at least two
-             words). Rare words count, common ones ("cost", "million") barely do — measured in
+             words). Rare words count, common ones ("cost", "million") barely do - measured in
              eval/memory_eval.py: 0/8 unrelated subquestions pass.
     filing   each item that passes goes to ONE subquestion: by meaning (embeddings) when available, else by
              the word match with a small same-specialist bonus.

@@ -457,7 +457,7 @@ textarea, input[type=text] { font-family: var(--sans) !important; }
 
 .rp-note-quiet { color: var(--slate) !important; }
 
-/* ------------------------------------------------------------------ evidence graph (Phase 11) */
+/* ------------------------------------------------------------------ evidence graph */
 .rp-graph-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s4);
   overflow-x: auto; margin-top: var(--s4); }
 .rp-graph { width: 100%; min-width: 720px; height: auto; display: block; font-family: var(--sans); }
@@ -477,7 +477,7 @@ textarea, input[type=text] { font-family: var(--sans) !important; }
 .rp-g-legend { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); margin: var(--s3) 0 var(--s2); font-size: 12.5px; color: var(--slate); }
 .rp-g-legend span { display: inline-flex; align-items: center; gap: 6px; }
 
-/* ------------------------------------------------------------------ evaluation (Phase 9) */
+/* ------------------------------------------------------------------ evaluation */
 .rp-tgt { margin-bottom: var(--s4); }
 .rp-tgt-row { display: grid; grid-template-columns: minmax(150px, 220px) 1fr 52px 132px; gap: var(--s3); align-items: center;
   font-size: 13px; padding: 5px 0; }

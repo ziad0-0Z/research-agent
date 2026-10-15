@@ -10,7 +10,7 @@
    - precision:   share of reused items that come from a page allowed for that subquestion
    - recall:      related subquestions that reuse at least one allowed item
 Misses are listed, never hidden. Results: eval/results/memory.json. The live time/LLM-call savings are
-measured separately (HANDOFF live checklist: same question twice, memory on vs off).
+measured separately (same question twice, memory on vs off; see METRICS.md).
 """
 from __future__ import annotations
 

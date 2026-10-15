@@ -7,7 +7,7 @@ Each round:
                          the Critic judges whether the cited quotes support the statement and
                          points to better evidence from what retrieval found
     3. CODE auto-fixes   strength rules (partial support is never "strong", low-quality-only
-                         evidence is "weak") — applied directly, no LLM round needed
+                         evidence is "weak") - applied directly, no LLM round needed
     4. CODE verdict      PASS   no blocking issues
                          REVISE blocking issues and rounds left → Writer gets the instructions
                          FAIL   loop ended with blocking issues (max rounds, no progress, or
