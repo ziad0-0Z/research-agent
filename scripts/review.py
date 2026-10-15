@@ -58,27 +58,27 @@ def show(store: Store, run_id: str) -> int:
 
 def on_event(stage: str, data: dict) -> None:
     if stage == "resumed":
-        print(f"▶️  Resuming after human decision: {data['decision']}")
+        print(f"▶  Resuming after human decision: {data['decision']}")
     elif stage == "revised":
-        print(f"🤖 Writer revised the report with the reviewer's note ({data['findings']} findings)")
+        print(f"[model] Writer revised the report with the reviewer's note ({data['findings']} findings)")
     elif stage == "critic_round":
         print(f"   Critic round {data['round']}: {data['verdict']} ({data['blocking']} blocking)")
     elif stage == "output_checked":
-        print("🛡️ Output guardrail: " + ("passed" if data["passed"] else "REJECTED"))
+        print("[guard] Output guardrail: " + ("passed" if data["passed"] else "REJECTED"))
         for i in data["issues"]:
             print(f"   [{i['check']}] {i['message'][:150]}")
     elif stage == "paused":
-        print("⏸️  Back in the review queue: a human must approve the revised report")
+        print("[paused] Back in the review queue: a human must approve the revised report")
     elif stage == "completed":
-        print(f"📄 Final report released ({data['chars']} chars)")
+        print(f"[report] Final report released ({data['chars']} chars)")
     elif stage == "rejected_by_human":
-        print("⛔ Rejected by the reviewer: nothing released")
+        print("[stop] Rejected by the reviewer: nothing released")
     elif stage == "memory_committed":
         if data.get("committed"):
-            print(f"🧠 Long-term memory: +{data['added']} evidence, {data['refreshed']} refreshed, "
+            print(f"[memory] Long-term memory: +{data['added']} evidence, {data['refreshed']} refreshed, "
                   f"{len(data['superseded'])} superseded, {len(data['contested'])} contested")
         else:
-            print(f"🧠 Long-term memory: nothing written ({data.get('reason')})")
+            print(f"[memory] Long-term memory: nothing written ({data.get('reason')})")
 
 
 async def decide_and_resume(store: Store, settings, run_id: str, action: str, note: str) -> int:
@@ -88,13 +88,13 @@ async def decide_and_resume(store: Store, settings, run_id: str, action: str, no
             settings.require_llm_key()  # only the revision needs the LLM
         result = await resume_run(run_id, settings=settings, store=store, on_event=on_event)
     except (ReviewError, ConfigError) as exc:
-        print(f"❌ {exc}")
+        print(f"[fail] {exc}")
         return 1
     if result.final_markdown:
         out = ROOT / "samples" / f"{run_id}.md"
         out.parent.mkdir(exist_ok=True)
         out.write_text(result.final_markdown, encoding="utf-8")
-        print(f"✅ COMPLETED — final report saved: {out.relative_to(ROOT)}")
+        print(f"[ok] COMPLETED — final report saved: {out.relative_to(ROOT)}")
     else:
         print(f"Status: {result.status}")
     return 0

@@ -65,7 +65,7 @@ async def time_setting(client, label, model, effort, repeats, prompts) -> None:
             print(f"  {label:42s} {name:6s} median {statistics.median(times):6.1f}s  "
                   f"(runs: {', '.join(f'{x:.1f}' for x in times)})  {note}")
         else:
-            print(f"  {label:42s} {name:6s} ❌ {note}")
+            print(f"  {label:42s} {name:6s} [fail] {note}")
 
 
 async def main(args) -> int:

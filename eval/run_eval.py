@@ -164,7 +164,7 @@ async def live_parts(settings, limit: int | None) -> None:
     golden = ev.load_golden("questions")["questions"][:limit]
     print(f"\nLive routing on {len(golden)} golden questions (3 model calls each)…")
     rl = await ev.routing_live(golden, settings, on_row=lambda r: print(
-        f"  {'✓' if r.get('ok') else '✗'} {r['id']} {r.get('path', '')} {r.get('specialists', '')} {'' if r.get('ok') else r.get('why', '')}"))
+        f"  {'ok' if r.get('ok') else 'x'} {r['id']} {r.get('path', '')} {r.get('specialists', '')} {'' if r.get('ok') else r.get('why', '')}"))
     rl["at"] = time.strftime("%Y-%m-%d %H:%M")
     ev.save_result("routing_live", rl)
     pairs = ev.load_golden("claim_pairs")["pairs"][:limit]
@@ -172,7 +172,7 @@ async def live_parts(settings, limit: int | None) -> None:
     cl = await ev.claim_support_live(pairs)
     cl["at"] = time.strftime("%Y-%m-%d %H:%M")
     for r in cl["rows"]:
-        print(f"  {'✓' if r.get('ok') else '✗'} {r['id']} expected {r['expected']}, got {r.get('got', r.get('error'))}")
+        print(f"  {'ok' if r.get('ok') else 'x'} {r['id']} expected {r['expected']}, got {r.get('got', r.get('error'))}")
     ev.save_result("claims_live", cl)
 
 
@@ -211,7 +211,7 @@ def main() -> int:
     off = ev.load_result("routing")["offline"]
     for r in off["rows"]:
         if not r["ok"]:
-            print(f"  ✗ router {r['id']}: {r['why']} — {r['question'][:70]}")
+            print(f"  x router {r['id']}: {r['why']} — {r['question'][:70]}")
     print(f"\nSaved eval/results/summary.json and {write_markdown(summary).relative_to(ROOT)}")
     return 0
 

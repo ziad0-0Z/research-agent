@@ -33,7 +33,7 @@ results: list[tuple[str, bool, str]] = []
 
 def check(name: str, ok: bool, detail: str = "") -> None:
     results.append((name, ok, detail))
-    print(f"   {'✅' if ok else '❌'} {name}" + (f" — {detail}" if detail else ""), flush=True)
+    print(f"   {'[ok]' if ok else '[fail]'} {name}" + (f" — {detail}" if detail else ""), flush=True)
 
 
 def step(n: int, title: str) -> None:
@@ -84,7 +84,7 @@ async def main(live_search: bool) -> int:
             for c in out["candidates"]:
                 c["source_id"] = page["source_id"]
                 candidates.append(c)
-                mark = "✓" if c["quote_verified"] else "✗"
+                mark = "ok" if c["quote_verified"] else "x"
                 print(f"      {mark} [{page['source_id']}] {c['claim'][:85]}")
         verified = [c for c in candidates if c["quote_verified"]]
         rate = len(verified) / len(candidates) if candidates else 0
@@ -120,7 +120,7 @@ async def main(live_search: bool) -> int:
             print(f"      agreements: {len(a['agreements'])} | contradictions: {len(a['contradictions'])} | "
                   f"dropped invalid ids: {cmp['dropped_invalid']}")
             for c in a["contradictions"][:2]:
-                print(f"      ⚡ {c['topic']}: {c['evidence_ids_a']} vs {c['evidence_ids_b']}")
+                print(f"      [conflict] {c['topic']}: {c['evidence_ids_a']} vs {c['evidence_ids_b']}")
             check("analysis returned", True)
         else:
             check("analysis returned", False, "need at least 2 saved evidence items")
@@ -169,7 +169,7 @@ async def main(live_search: bool) -> int:
     failed = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed")
     print("Tool log:", f"{sum(r.ok for r in ctx.tool_log)} ok / {sum(not r.ok for r in ctx.tool_log)} blocked-or-failed")
-    print("\nTools check:", "PASSED" if not failed else "FAILED — see ❌ above")
+    print("\nTools check:", "PASSED" if not failed else "FAILED — see [fail] above")
     return 0 if not failed else 1
 
 

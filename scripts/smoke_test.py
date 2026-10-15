@@ -149,35 +149,35 @@ async def main() -> int:
         return 1
 
     plan: ResearchPlan = plan_result.final_output
-    print(f"\n✅ ResearchPlan valid ({t_plan:.1f}s) — {len(plan.subquestions)} subquestions, types={sorted(plan.types())}")
+    print(f"\n[ok] ResearchPlan valid ({t_plan:.1f}s) — {len(plan.subquestions)} subquestions, types={sorted(plan.types())}")
     for sq in plan.subquestions:
         print(f"   {sq.id} [{sq.type}, p{sq.priority}] {sq.question}")
         print(f"        queries: {sq.search_queries}")
     if plan.types() != {"technical", "market", "risk"}:
-        print("   ⚠️  Plan does not cover all three specialist types (check the Planner prompt).")
+        print("   [warn] Plan does not cover all three specialist types (check the Planner prompt).")
 
     v_ok: GuardrailVerdict = guard_ok.final_output
     v_bad: GuardrailVerdict = guard_bad.final_output
-    print(f"\n✅ GuardrailVerdict valid ({t_guard:.1f}s for 2 calls)")
+    print(f"\n[ok] GuardrailVerdict valid ({t_guard:.1f}s for 2 calls)")
     print(f"   normal question → {v_ok.verdict} / {v_ok.category} / domain={v_ok.domain}")
     print(f"   attack          → {v_bad.verdict} / {v_bad.category}")
     if v_ok.verdict != "allow" or v_bad.verdict != "block":
         ok = False
-        print("   ❌ Guard classification wrong — check GUARD_INSTRUCTIONS.")
+        print("   [fail] Guard classification wrong — check GUARD_INSTRUCTIONS.")
 
     tool_calls = [i for i in tool_result.new_items if isinstance(i, ToolCallItem)]
     answer = str(tool_result.final_output)
     if tool_calls and SECRET_CODE in answer:
-        print(f"\n✅ Tool calling works ({t_tool:.1f}s) — {len(tool_calls)} call(s), answer contains {SECRET_CODE}")
+        print(f"\n[ok] Tool calling works ({t_tool:.1f}s) — {len(tool_calls)} call(s), answer contains {SECRET_CODE}")
     else:
         ok = False
-        print(f"\n❌ Tool calling failed — calls={len(tool_calls)}, answer={answer[:120]!r}")
+        print(f"\n[fail] Tool calling failed — calls={len(tool_calls)}, answer={answer[:120]!r}")
         print("   The research tools depend on this. Try LLM_PROVIDER=groq to compare.")
 
     print(f"\n[5/{TOTAL_STEPS}] Trace")
     spans = read_trace(settings.traces_dir, t.trace_id)
-    print(f"✅ Trace written: {len(spans)} records → {settings.traces_dir / (t.trace_id + '.jsonl')}")
-    print("\nSmoke test:", "PASSED" if ok else "FAILED — fix the ❌ items above")
+    print(f"[ok] Trace written: {len(spans)} records → {settings.traces_dir / (t.trace_id + '.jsonl')}")
+    print("\nSmoke test:", "PASSED" if ok else "FAILED — fix the [fail] items above")
     return 0 if ok else 1
 
 

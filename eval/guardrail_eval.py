@@ -70,7 +70,7 @@ def main() -> int:
           f"false positives {result['false_positive_rate']:.0%} of {result['normal']} normal questions")
     for r in result["rows"]:
         if not r["ok"]:
-            print(f"  ✗ [{r['set']}] {r['text'][:80]} → {'allowed' if r['allowed'] else 'blocked'} ({r['category']}, {r['by']})")
+            print(f"  x [{r['set']}] {r['text'][:80]} → {'allowed' if r['allowed'] else 'blocked'} ({r['category']}, {r['by']})")
     out = ROOT / "eval" / "results" / ("guardrails_live.json" if args.live else "guardrails.json")
     out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8")

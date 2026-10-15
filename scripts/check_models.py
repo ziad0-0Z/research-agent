@@ -65,7 +65,7 @@ def check(client: OpenAI, model: str) -> None:
         chat_s = time.perf_counter() - start
         text = (resp.choices[0].message.content or "").strip()[:20]
     except Exception as exc:  # noqa: BLE001 - we only report
-        print(f"  ❌ {model:32s} {type(exc).__name__}: {str(exc)[:90]}")
+        print(f"  [fail] {model:32s} {type(exc).__name__}: {str(exc)[:90]}")
         return
 
     start = time.perf_counter()
@@ -77,13 +77,13 @@ def check(client: OpenAI, model: str) -> None:
         )
         tool_s = time.perf_counter() - start
         tools_work = bool(resp.choices[0].message.tool_calls)
-        tool_ok = "tools ✅" if tools_work else "tools ❌ (no call)"
+        tool_ok = "tools [ok]" if tools_work else "tools [fail] (no call)"
     except Exception as exc:  # noqa: BLE001
         tool_s = time.perf_counter() - start
         tools_work = False
-        tool_ok = f"tools ❌ {type(exc).__name__}"
-    # ✅ only when both chat and tool calling work; ⚠️ when chat works but tools don't
-    mark = "✅" if tools_work else "⚠️"
+        tool_ok = f"tools [fail] {type(exc).__name__}"
+    # [ok] only when both chat and tool calling work; [warn] when chat works but tools don't
+    mark = "[ok]" if tools_work else "[warn]"
     print(f"  {mark} {model:32s} chat {chat_s:5.1f}s ({text!r}) | {tool_ok} {tool_s:5.1f}s")
 
 
@@ -102,7 +102,7 @@ def main() -> int:
     print(f"Testing {len(models)} {provider} models (no retries, 25s timeout)...\n")
     for model in models:
         check(client, model)
-    print("\n✅ = chat and tools work · ⚠️ = chat only (not usable for agents) · ❌ = unavailable")
+    print("\n[ok] = chat and tools work · [warn] = chat only (not usable for agents) · [fail] = unavailable")
     return 0
 
 
