@@ -1,0 +1,238 @@
+{
+ "grounding": {
+  "runs": 11,
+  "cited": 142,
+  "valid": 142,
+  "findings": 66,
+  "grounded": 66,
+  "unchecked": 0,
+  "citation_validity": 1.0,
+  "grounding_rate": 1.0
+ },
+ "faults": {
+  "faults": {
+   "fake_citation": {
+    "runs": 3,
+    "caught": 3,
+    "run_ids": [
+     "run_a1b70457b3",
+     "run_c42c0a82ea",
+     "run_4035a0385b"
+    ]
+   },
+   "tampered_quote": {
+    "runs": 2,
+    "caught": 2,
+    "run_ids": [
+     "run_8fb637835d",
+     "run_89f7fd07be"
+    ]
+   },
+   "unsupported_claim": {
+    "runs": 1,
+    "caught": 1,
+    "run_ids": [
+     "run_75c2d605a0"
+    ]
+   },
+   "search_outage": {
+    "runs": 2,
+    "caught": 2,
+    "run_ids": [
+     "run_5c68102119",
+     "run_d38b8a8dae"
+    ]
+   }
+  },
+  "output_guardrail_runs": 5,
+  "output_guardrail_caught": 5,
+  "output_guardrail_catch_rate": 1.0
+ },
+ "parallel": {
+  "runs": 12,
+  "median_speedup": 2.38,
+  "min_speedup": 1.44,
+  "max_speedup": 2.91,
+  "rows": [
+   {
+    "run_id": "run_2473dfde4e",
+    "workers": 3,
+    "wall": 184.1,
+    "sequential": 432.7,
+    "speedup": 2.35
+   },
+   {
+    "run_id": "run_bf0829a206",
+    "workers": 3,
+    "wall": 185.2,
+    "sequential": 483.0,
+    "speedup": 2.61
+   },
+   {
+    "run_id": "run_5c68102119",
+    "workers": 3,
+    "wall": 184.1,
+    "sequential": 374.1,
+    "speedup": 2.03
+   },
+   {
+    "run_id": "run_8fb637835d",
+    "workers": 2,
+    "wall": 142.6,
+    "sequential": 205.2,
+    "speedup": 1.44
+   },
+   {
+    "run_id": "run_89f7fd07be",
+    "workers": 3,
+    "wall": 253.3,
+    "sequential": 623.5,
+    "speedup": 2.46
+   },
+   {
+    "run_id": "run_a1b70457b3",
+    "workers": 3,
+    "wall": 175.4,
+    "sequential": 420.0,
+    "speedup": 2.39
+   },
+   {
+    "run_id": "run_75c2d605a0",
+    "workers": 3,
+    "wall": 104.3,
+    "sequential": 246.2,
+    "speedup": 2.36
+   },
+   {
+    "run_id": "run_ad90fc2255",
+    "workers": 2,
+    "wall": 96.2,
+    "sequential": 180.2,
+    "speedup": 1.87
+   },
+   {
+    "run_id": "run_5db1aabf91",
+    "workers": 3,
+    "wall": 66.3,
+    "sequential": 193.1,
+    "speedup": 2.91
+   },
+   {
+    "run_id": "run_3bdcbb560c",
+    "workers": 3,
+    "wall": 209.8,
+    "sequential": 599.6,
+    "speedup": 2.86
+   },
+   {
+    "run_id": "run_49da8d39c7",
+    "workers": 3,
+    "wall": 123.8,
+    "sequential": 303.2,
+    "speedup": 2.45
+   },
+   {
+    "run_id": "run_d38b8a8dae",
+    "workers": 3,
+    "wall": 62.0,
+    "sequential": 126.5,
+    "speedup": 2.04
+   }
+  ]
+ },
+ "critic": {
+  "runs": 23,
+  "verdicts": {
+   "PASS": 23
+  },
+  "mean_rounds": 1.17,
+  "revised_runs": 4
+ },
+ "scenarios": [
+  {
+   "number": 1,
+   "name": "Happy path",
+   "proof": "released with every check passed",
+   "run_id": "run_2473dfde4e",
+   "how": "recorded"
+  },
+  {
+   "number": 2,
+   "name": "3+ sequential steps",
+   "proof": "plan → evidence → analysis → report stored",
+   "run_id": "run_2473dfde4e",
+   "how": "recorded"
+  },
+  {
+   "number": 3,
+   "name": "Routing (sensitive → review path)",
+   "proof": "code router chose the sensitive path",
+   "run_id": "run_5db1aabf91",
+   "how": "recorded"
+  },
+  {
+   "number": 4,
+   "name": "Parallelization",
+   "proof": "3 specialists overlapped, speedup 2.35×",
+   "run_id": "run_2473dfde4e",
+   "how": "recorded"
+  },
+  {
+   "number": 5,
+   "name": "Orchestrator-workers (subset of specialists)",
+   "proof": "orchestrator used risk, technical only",
+   "run_id": "run_ad90fc2255",
+   "how": "recorded"
+  },
+  {
+   "number": 6,
+   "name": "Evaluator rejects, then passes",
+   "proof": "Critic: 2 rounds, final PASS",
+   "run_id": "run_75c2d605a0",
+   "how": "recorded"
+  },
+  {
+   "number": 7,
+   "name": "Input guardrail",
+   "proof": "blocked at input (off_scope)",
+   "run_id": "run_3dd1d0f1ae",
+   "how": "recorded"
+  },
+  {
+   "number": 8,
+   "name": "Tool blocked",
+   "proof": "protected tools refuse unsafe calls (tests + live check button)",
+   "run_id": null,
+   "how": "tests"
+  },
+  {
+   "number": 9,
+   "name": "Output guardrail",
+   "proof": "output guardrail rejected (tampered_quote)",
+   "run_id": "run_8fb637835d",
+   "how": "recorded"
+  },
+  {
+   "number": 10,
+   "name": "Failure recovery",
+   "proof": "search failed; run finished with a labelled partial report",
+   "run_id": "run_bf0829a206",
+   "how": "recorded"
+  },
+  {
+   "number": 11,
+   "name": "Human escalation",
+   "proof": "paused for a human decision and decided",
+   "run_id": "run_bf0829a206",
+   "how": "recorded"
+  },
+  {
+   "number": 12,
+   "name": "Trace",
+   "proof": "trace file linked to the run",
+   "run_id": "run_2473dfde4e",
+   "how": "recorded"
+  }
+ ],
+ "at": "2026-10-15 19:17"
+}

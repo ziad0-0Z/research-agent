@@ -38,6 +38,8 @@ WORKER = {"success": ("Complete", "ok"), "partial": ("Partial", "warn"), "failed
           "timeout": ("Timed out", "bad"), "running": ("Researching", "info")}
 MEM_STATUS = {"active": ("Active", "ok"), "superseded": ("Superseded", "muted"),
               "unverifiable": ("Unverifiable", "bad"), "retired": ("Retired", "muted")}
+DEMO_FAULT = {"unsupported_claim": "planted claim", "fake_citation": "fake citation",
+              "tampered_quote": "altered quote", "search_outage": "search outage"}
 ORIGIN = {"tavily": "Tavily", "ddg": "DuckDuckGo", "offline": "Offline corpus", "memory": "Memory"}
 
 
@@ -484,9 +486,12 @@ def run_table_rows(rows) -> list[list[str]]:
             flags.append(badge(f"{r.reused} from memory", "info"))
         if r.stale:
             flags.append(badge("Interrupted", "muted"))
+        if r.demo_fault:
+            flags.append(badge(f"Demo: {DEMO_FAULT.get(r.demo_fault, r.demo_fault)}", "info",
+                               "A test fault was planted on purpose to show a safety check working"))
         q = r.title or r.question
         out.append([f'<div class="rp-cell-q"><b>{e(q)}</b>{"<span>" + e(r.question) + "</span>" if r.title else ""}</div>',
-                    badge(label, tone) + "".join(flags),
+                    f'<div class="rp-badges">{badge(label, tone)}{"".join(flags)}</div>',
                     "—" if r.confidence is None else f"{r.confidence:.2f}",
                     str(r.evidence), f'<span title="{e(r.created_at)}">{e(ago(r.created_at))}</span>',
                     f'<code class="rp-id">{e(r.run_id)}</code>'])
@@ -505,5 +510,37 @@ def attention_list(pending: list[dict], attention_rows) -> str:
         items.append(f'<li><div>{badge(label, tone)}<b>{e(r.title or r.question)}</b></div>'
                      f'<p>{e(ago(r.created_at))} · {mono(r.run_id)}</p></li>')
     if not items:
-        return empty("Nothing needs attention", "No paused, failed or rejected runs.")
+        return empty("Nothing needs attention", "No paused or failed runs, and no guardrail rejection outside "
+                     "the planted demo faults.")
     return f'<ul class="rp-attention">{"".join(items[:6])}</ul>'
+
+
+# --------------------------------------------------------------------------- evaluation charts
+
+def target_chart(items: list[tuple[str, float, float, bool]]) -> str:
+    """Measured value vs target for each metric that has a number. Rows: name, bar to the value, tick at the target.
+    The verdict is written out (meets / below), so it never depends on colour alone."""
+    if not items:
+        return ""
+    rows = []
+    for name, value, target, lower_better in items:
+        ok = value <= target if lower_better else value >= target
+        tone = "ok" if ok else "bad"
+        rows.append(
+            f'<div class="rp-tgt-row"><span class="rp-tgt-name">{e(name)}</span>'
+            f'<span class="rp-tgt-track"><span class="rp-tgt-fill rp-{tone}" style="width:{max(value, .004) * 100:.1f}%"></span>'
+            f'<span class="rp-tgt-mark" style="left:{target * 100:.1f}%" title="target {target * 100:.0f}%"></span></span>'
+            f'<span class="rp-tgt-val">{value * 100:.0f}%</span>'
+            f'<span class="rp-tgt-verdict rp-{tone}">{"meets" if ok else "below"} {"≤" if lower_better else "≥"} {target * 100:.0f}%</span></div>')
+    return (f'<section class="rp-section rp-tgt"><header><h3>Measured against targets</h3>'
+            f'<span class="rp-section-aside">bar = measured · tick = target</span></header>{"".join(rows)}</section>')
+
+
+def speedup_bars(rows: list[dict]) -> str:
+    top = max(r["speedup"] for r in rows) or 1
+    out = "".join(
+        f'<div class="rp-gantt-row"><span class="rp-gantt-name">{e(r["run_id"])} · {r["workers"]} specialists</span>'
+        f'<span class="rp-gantt-track"><span class="rp-gantt-bar rp-model" style="left:0;width:{r["speedup"] / top * 100:.1f}%" '
+        f'title="{r["wall"]} s wall vs {r["sequential"]} s sequential"></span></span>'
+        f'<span class="rp-gantt-val">{r["speedup"]}×</span></div>' for r in rows[:12])
+    return f'<div class="rp-gantt wide">{out}</div>'

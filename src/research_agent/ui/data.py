@@ -92,6 +92,27 @@ class RunRow:
     reused: int
     session_id: str | None
     stale: bool  # "running" but not updated for a long time: the process that ran it is gone
+    demo_fault: str | None = None  # a test fault was planted on purpose (scenarios 6, 9, 10)
+
+
+def demo_fault_of(state: dict) -> str | None:
+    fault = state.get("demo_fault") or (state.get("reliability") or {}).get("demo_fault")
+    if fault:
+        return fault
+    # Runs from Phase 5 (before the fault was stored in the state): the planted fake citation always cites ev999,
+    # an id the pipeline never creates, so a rejection for exactly that id identifies the demo.
+    issues = (state.get("output_check") or {}).get("issues") or []
+    if issues and all("ev999" in (i.get("message") or "") for i in issues):
+        return "fake_citation"
+    return None
+
+
+def needs_attention(status: str, state: dict) -> bool:
+    """Paused, failed, or rejected by a guardrail for a REAL problem. A planted demo fault that the guardrail
+    stopped is the system working as designed, so it is labelled, not raised as an alarm."""
+    if status in ("paused_for_review", "failed"):
+        return True
+    return status == "rejected_by_guardrail" and not demo_fault_of(state)
 
 
 STALE_RUNNING_SECONDS = 30 * 60
@@ -103,14 +124,18 @@ def run_rows(store: Store, query: str = "", status: str = "all", limit: int = 30
     q = (query or "").strip().lower()
     now = utcnow()
     out = []
-    for row in store.latest_runs(limit):
+    filtering = bool(q) or status != "all"
+    # the limit applies to what is SHOWN: with a filter, scan further back so older matches are not missed
+    for row in store.latest_runs(max(limit, 2000) if filtering else limit):
+        if len(out) >= limit:
+            break
         state = _state(row)
         report = state.get("report") or {}
         title = report.get("title") or ""
         if q and q not in row["question"].lower() and q not in title.lower() and q not in row["id"]:
             continue
         st = row["status"]
-        if status == "attention" and st not in ("paused_for_review", "failed", "rejected_by_guardrail"):
+        if status == "attention" and not needs_attention(st, state):
             continue
         if status not in ("all", "attention") and st != status and not (status == "legacy" and st in LEGACY_STATUSES):
             continue
@@ -121,6 +146,7 @@ def run_rows(store: Store, query: str = "", status: str = "all", limit: int = 30
             evidence=counts.get(row["id"], 0), partial=bool((state.get("reliability") or {}).get("partial")),
             reused=len(state.get("memory_reuse") or {}), session_id=state.get("session_id"),
             stale=st == "running" and updated is not None and (now - updated).total_seconds() > STALE_RUNNING_SECONDS,
+            demo_fault=demo_fault_of(state),
         ))
     return out
 
@@ -135,7 +161,11 @@ def overview_metrics(store: Store) -> dict[str, Any]:
         "runs": total,
         "completed": by_status.get("completed", 0),
         "pending_reviews": len(store.pending_reviews()),
-        "needs_attention": sum(by_status.get(s, 0) for s in ("failed", "rejected_by_guardrail")),
+        "needs_attention": sum(1 for r in store._query(
+            "SELECT status, state_json FROM runs WHERE status IN ('failed', 'rejected_by_guardrail')")
+            if needs_attention(r["status"], _state(r))),
+        "demo_faults_stopped": sum(1 for r in store._query(
+            "SELECT status, state_json FROM runs WHERE status='rejected_by_guardrail'") if demo_fault_of(_state(r))),
         "blocked": by_status.get("blocked", 0),
         "verified_evidence": verified,
         "memory_active": mem["evidence_by_status"].get("active", 0),
@@ -320,37 +350,15 @@ def _load(path: Path) -> Any:
 
 
 def grounding_metrics(store: Store) -> dict[str, Any]:
-    """Citation validity and grounding over every report the system released (status completed)."""
-    cited = valid = findings = grounded = unchecked = 0
-    runs = 0
-    for row in store._query("SELECT * FROM runs WHERE status='completed'"):
-        report = _state(row).get("report")
-        if not report:
-            continue
-        runs += 1
-        ev = {e.id: e for e in store.list_evidence(row["id"])}
-        for f in report.get("findings", []):
-            findings += 1
-            ok = True
-            for eid in f.get("evidence_ids", []):
-                cited += 1
-                e = ev.get(eid)
-                if e and e.verified:
-                    valid += 1
-                if not (e and e.verified and e.support in ("supported", "partial")):
-                    ok = False
-                    if e and e.support == "unchecked":
-                        unchecked += 1
-            grounded += ok
-    return {"runs": runs, "cited": cited, "valid": valid, "findings": findings, "grounded": grounded,
-            "unchecked": unchecked,
-            "citation_validity": valid / cited if cited else None,
-            "grounding_rate": grounded / findings if findings else None}
+    """Citation validity and grounding over every released report (shared with eval/run_eval.py)."""
+    from ..evaluation import grounding_metrics as _g
+    return _g(store)
 
 
 def eval_results() -> dict[str, Any]:
     out: dict[str, Any] = {}
-    for name in ("guardrails", "guardrails_live", "retrieval", "memory", "tests"):
+    for name in ("guardrails", "guardrails_live", "retrieval", "memory", "tests", "routing", "routing_live",
+                 "claims_live", "summary"):
         p = EVAL_DIR / f"{name}.json"
         data = _load(p)
         if data is not None:

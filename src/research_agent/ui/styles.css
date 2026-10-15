@@ -441,8 +441,68 @@ textarea, input[type=text] { font-family: var(--sans) !important; }
   .rp-next .rp-node { flex-basis: 50%; }
   .rp-pagehead h1 { font-size: 22px; }
   .rp-df { overflow-x: auto; }
+  .rp-df table { min-width: 560px; }  /* scroll sideways instead of squeezing columns to one letter */
+  /* Gradio columns default to min-width 320px: at phone width that pushed cards past the screen edge */
+  #rp-main .row > .column, #rp-main .row > div, #rp-main .column { min-width: 0 !important; }
+  #rp-main .rp-card, #rp-main .rp-page, #rp-main .rp-hero { max-width: 100%; box-sizing: border-box; }
+  .rp-empty { max-width: 100%; box-sizing: border-box; }
+  /* side-by-side panes (table + detail, composer + help) stack on phones */
+  #rp-main .row { flex-wrap: wrap !important; }
+  #rp-main .row > .column { flex: 1 1 100% !important; width: 100% !important; }
+  .rp-filters > * { flex: 1 1 45% !important; min-width: 0 !important; }
+  .rp-filters > *:first-child { flex-basis: 100% !important; }
 }
 
 .rp-inline-btn { align-self: flex-start !important; width: auto !important; flex: 0 0 auto !important; padding-left: 22px !important; padding-right: 22px !important; }
 
 .rp-note-quiet { color: var(--slate) !important; }
+
+/* ------------------------------------------------------------------ evidence graph (Phase 11) */
+.rp-graph-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s4);
+  overflow-x: auto; margin-top: var(--s4); }
+.rp-graph { width: 100%; min-width: 720px; height: auto; display: block; font-family: var(--sans); }
+.rp-graph .rp-g-col { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; fill: var(--slate-2); }
+.rp-graph .rp-g-src { fill: none; stroke: var(--line); stroke-width: 1.4; }
+.rp-graph .rp-g-cite { fill: none; stroke-width: 2; opacity: .85; }
+.rp-graph .rp-g-cite:hover { stroke-width: 3.2; opacity: 1; }
+.rp-graph .rp-g-contra, .rp-g-legend .rp-g-contra { fill: none; stroke: var(--bad); stroke-width: 1.8; stroke-dasharray: 5 3; }
+.rp-graph .rp-g-node rect:first-of-type { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.rp-graph .rp-g-node:hover rect:first-of-type { stroke: var(--accent); stroke-width: 1.8; }
+.rp-graph .rp-g-f rect:first-of-type { fill: var(--accent-soft); stroke: var(--info-line); }
+.rp-graph .rp-g-q { fill: var(--accent); opacity: .55; }
+.rp-graph .rp-g-t { font-size: 12.5px; fill: var(--ink); }
+.rp-graph .rp-g-m { font-size: 10.5px; fill: var(--slate); }
+.rp-graph .rp-g-id { font-family: var(--mono); font-size: 11.5px; fill: var(--ink); font-weight: 500; }
+.rp-graph .rp-g-key { font-family: var(--mono); font-size: 13px; font-weight: 600; fill: var(--accent-ink); }
+.rp-g-legend { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); margin: var(--s3) 0 var(--s2); font-size: 12.5px; color: var(--slate); }
+.rp-g-legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ------------------------------------------------------------------ evaluation (Phase 9) */
+.rp-tgt { margin-bottom: var(--s4); }
+.rp-tgt-row { display: grid; grid-template-columns: minmax(150px, 220px) 1fr 52px 132px; gap: var(--s3); align-items: center;
+  font-size: 13px; padding: 5px 0; }
+.rp-tgt-name { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-tgt-track { position: relative; height: 10px; background: var(--line-2); border-radius: 5px; }
+.rp-tgt-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; border: none !important; }
+.rp-tgt-fill.rp-ok { background: var(--ok); } .rp-tgt-fill.rp-bad { background: var(--bad); }
+.rp-tgt-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink); border-radius: 1px; }
+.rp-tgt-val { font-family: var(--mono); font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+.rp-tgt-verdict { font-size: 11.5px; font-weight: 500; background: transparent !important; border: none !important; }
+.rp-tgt-verdict.rp-ok { color: var(--ok); } .rp-tgt-verdict.rp-bad { color: var(--bad); }
+.rp-how { display: inline-block; margin-left: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  padding: 1px 6px; border-radius: 4px; background: var(--muted-bg); color: var(--muted); vertical-align: 1px; }
+.rp-how-recorded { background: var(--info-bg); color: var(--info); }
+.rp-how-live { background: var(--accent-soft); color: var(--accent-ink); }
+@media (max-width: 720px) {
+  .rp-tgt-row { grid-template-columns: 1fr 52px; }
+  .rp-tgt-track { grid-column: 1 / -1; grid-row: 2; }
+  .rp-tgt-verdict { grid-column: 1 / -1; }
+}
+
+/* ------------------------------------------------------------------ table polish */
+.rp-badges { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-start; }
+.rp-df-compact .rp-cell-q b, .rp-df-compact .rp-cell-q span { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.rp-df-compact .rp-cell-q b { -webkit-line-clamp: 2; }
+.rp-df-compact .rp-cell-q span { -webkit-line-clamp: 1; }
+.rp-df-compact .rp-badge { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-cell-q span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }

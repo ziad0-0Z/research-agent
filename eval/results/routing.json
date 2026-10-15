@@ -1,0 +1,330 @@
+{
+ "offline": {
+  "mode": "offline (code router, keywords only)",
+  "n": 20,
+  "correct": 20,
+  "accuracy": 1.0,
+  "rows": [
+   {
+    "id": "q01",
+    "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "primary demo question"
+   },
+   {
+    "id": "q02",
+    "question": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "secondary demo question"
+   },
+   {
+    "id": "q03",
+    "question": "Should our bank process customer financial data with a self-hosted LLM?",
+    "expected": "sensitive",
+    "path": "sensitive",
+    "domains": [
+     "financial"
+    ],
+    "matched": [
+     "bank",
+     "customer financial"
+    ],
+    "ok": true,
+    "why": "ok",
+    "note": "scenario 3 / 11"
+   },
+   {
+    "id": "q04",
+    "question": "What are the security risks of self-hosting an LLM?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "scenario 5: narrow question, no cost research"
+   },
+   {
+    "id": "q05",
+    "question": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "cost question"
+   },
+   {
+    "id": "q06",
+    "question": "Can our hospital use a cloud LLM API to summarise patient medical records?",
+    "expected": "sensitive",
+    "path": "sensitive",
+    "domains": [
+     "medical"
+    ],
+    "matched": [
+     "hospital",
+     "medical records",
+     "patient"
+    ],
+    "ok": true,
+    "why": "ok",
+    "note": ""
+   },
+   {
+    "id": "q07",
+    "question": "Should our law firm use a hosted LLM to draft litigation documents?",
+    "expected": "sensitive",
+    "path": "sensitive",
+    "domains": [
+     "legal"
+    ],
+    "matched": [
+     "law firm",
+     "litigation"
+    ],
+    "ok": true,
+    "why": "ok",
+    "note": ""
+   },
+   {
+    "id": "q08",
+    "question": "Should an insurance company use an LLM to triage incoming insurance claims?",
+    "expected": "sensitive",
+    "path": "sensitive",
+    "domains": [
+     "financial"
+    ],
+    "matched": [
+     "insurance claims"
+    ],
+    "ok": true,
+    "why": "ok",
+    "note": ""
+   },
+   {
+    "id": "q09",
+    "question": "Should a fintech startup store credit card data next to embeddings in a managed vector database?",
+    "expected": "sensitive",
+    "path": "sensitive",
+    "domains": [
+     "financial"
+    ],
+    "matched": [
+     "credit card"
+    ],
+    "ok": true,
+    "why": "ok",
+    "note": ""
+   },
+   {
+    "id": "q10",
+    "question": "Should our clinic let a chatbot answer patient questions about their prescriptions?",
+    "expected": "sensitive",
+    "path": "sensitive",
+    "domains": [
+     "medical"
+    ],
+    "matched": [
+     "patient",
+     "prescriptions"
+    ],
+    "ok": true,
+    "why": "ok",
+    "note": ""
+   },
+   {
+    "id": "q11",
+    "question": "What are the vendor lock-in risks of building our product on a single cloud LLM provider?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "narrow risk question"
+   },
+   {
+    "id": "q12",
+    "question": "How much does it cost per month to serve 40 million tokens with a hosted API versus a rented GPU?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "narrow cost question"
+   },
+   {
+    "id": "q13",
+    "question": "Which gives lower p95 latency for a chat product: a self-hosted 8B model on one GPU or a shared hosted API?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "narrow technical question"
+   },
+   {
+    "id": "q14",
+    "question": "Should a 3-person team use Kafka or RabbitMQ for an event pipeline handling 2,000 messages per second?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "outside the LLM corpus: shows the system is general"
+   },
+   {
+    "id": "q15",
+    "question": "Should we fine-tune a small open model or use prompt engineering with a hosted model for customer support replies?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": ""
+   },
+   {
+    "id": "q16",
+    "question": "Should we self-host Microsoft Phi-3 mini or call a hosted API for an internal coding assistant?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "trap: 'Phi' is a model family, not protected health information"
+   },
+   {
+    "id": "q17",
+    "question": "Should our tennis court booking app add an LLM chatbot for customer questions?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "trap: 'court'"
+   },
+   {
+    "id": "q18",
+    "question": "Should a trading card game startup rent cloud GPUs or use a hosted image-generation API for card art?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "trap: 'trading'"
+   },
+   {
+    "id": "q19",
+    "question": "Which open-source tools help diagnose latency spikes in a self-hosted LLM inference server?",
+    "expected": "standard",
+    "path": "standard",
+    "domains": [],
+    "matched": [],
+    "ok": true,
+    "why": "ok",
+    "note": "trap: 'diagnose'"
+   },
+   {
+    "id": "q20",
+    "question": "Should a stock trading platform use a hosted LLM to summarise client portfolio activity?",
+    "expected": "sensitive",
+    "path": "sensitive",
+    "domains": [
+     "financial"
+    ],
+    "matched": [
+     "stock trading"
+    ],
+    "ok": true,
+    "why": "ok",
+    "note": "real financial trading"
+   }
+  ]
+ },
+ "recorded": {
+  "mode": "recorded (golden questions found in research.db)",
+  "n": 4,
+  "correct": 4,
+  "accuracy": 1.0,
+  "rows": [
+   {
+    "id": "q01",
+    "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+    "run_id": "run_5c68102119",
+    "path": "standard",
+    "specialists": [
+     "market",
+     "risk",
+     "technical"
+    ],
+    "route_ok": true,
+    "specialists_ok": true,
+    "ok": true,
+    "why": "ok"
+   },
+   {
+    "id": "q04",
+    "question": "What are the security risks of self-hosting an LLM?",
+    "run_id": "run_ad90fc2255",
+    "path": "standard",
+    "specialists": [
+     "risk",
+     "technical"
+    ],
+    "route_ok": true,
+    "specialists_ok": true,
+    "ok": true,
+    "why": "ok"
+   },
+   {
+    "id": "q03",
+    "question": "Should our bank process customer financial data with a self-hosted LLM?",
+    "run_id": "run_5db1aabf91",
+    "path": "sensitive",
+    "specialists": [
+     "market",
+     "risk",
+     "technical"
+    ],
+    "route_ok": true,
+    "specialists_ok": true,
+    "ok": true,
+    "why": "ok"
+   },
+   {
+    "id": "q05",
+    "question": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?",
+    "run_id": "run_99f0e7d088",
+    "path": "standard",
+    "specialists": [
+     "market",
+     "technical"
+    ],
+    "route_ok": true,
+    "specialists_ok": true,
+    "ok": true,
+    "why": "ok"
+   }
+  ]
+ },
+ "at": "2026-10-15 19:17"
+}

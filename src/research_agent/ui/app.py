@@ -26,7 +26,7 @@ from ..trace_view import find_run_traces, load_summary
 from ..workflows.resume import ReviewError, decide_review
 from . import components as c
 from . import data as d
-from . import trace_html
+from . import evidence_graph, trace_html
 from .jobs import event_counts, manager
 
 CSS_PATH = Path(__file__).with_name("styles.css")
@@ -140,7 +140,9 @@ def build_app(settings: Settings) -> gr.Blocks:
             c.stat("Reports released", m["completed"], f"of {m['runs']} runs"),
             c.stat("Awaiting review", m["pending_reviews"], "held before release", "warn" if m["pending_reviews"] else ""),
             c.stat("Verified evidence", m["verified_evidence"], f"{m['memory_active']} kept in memory"),
-            c.stat("Needs attention", m["needs_attention"], "failed or rejected by a guardrail",
+            c.stat("Needs attention", m["needs_attention"],
+                   "failed, or rejected for a real problem" + (f" · {m['demo_faults_stopped']} planted faults stopped"
+                                                               if m["demo_faults_stopped"] else ""),
                    "bad" if m["needs_attention"] else ""),
         ], "rp-stats-overview")
         att = c.attention_list(d.pending(store), d.run_rows(store, status="attention", limit=8))
@@ -166,7 +168,7 @@ def build_app(settings: Settings) -> gr.Blocks:
                   c.support_badge(r["support"]) + c.badge(c.ORIGIN.get(r["origin"], r["origin"]),
                                                           "info" if r["origin"] == "memory" else "muted")]
                  for r in rows[:400]]
-        more = f" (showing the first 400)" if len(rows) > 400 else ""
+        more = " (showing the first 400)" if len(rows) > 400 else ""
         note = (f'<p class="rp-count">{len(rows)} evidence item{"s" if len(rows) != 1 else ""}{more}</p>'
                 if rows else c.empty("No evidence matches", "Try fewer filters."))
         return note, gr.update(value=table or [["", ""]]), [r["key"] for r in rows[:400]]
@@ -186,7 +188,8 @@ def build_app(settings: Settings) -> gr.Blocks:
                  if not choices else f'<p class="rp-count">{len(pend)} awaiting a decision'
                  f'{f", {len(waiting)} decided but not resumed" if waiting else ""}</p>')
         first = choices[0][1] if choices else None
-        return (intro, gr.update(choices=choices, value=first, visible=bool(choices))) + review_detail(first)
+        return ((intro, gr.update(choices=choices, value=first, visible=bool(choices))) + review_detail(first)
+                + (gr.update(visible=bool(choices)),))  # no empty panes when the queue is empty
 
     def review_detail(run_id):
         if not run_id:
@@ -298,31 +301,58 @@ def build_app(settings: Settings) -> gr.Blocks:
         return (top + parallel + rel_html, blocks)
 
     def load_evaluation():
+        """Evaluation page: every number says how it was measured (recorded / offline / live) and when."""
+        from .. import evaluation as ev
         g = d.grounding_metrics(store)
         res = d.eval_results()
-        cards = []
+        faults = ev.fault_outcomes(store)
+        golden = ev.load_golden("questions")["questions"]
+        r_off = ev.routing_offline(golden, settings.sensitive_domains)
+        r_rec = ev.routing_from_runs(store, golden)
+        cards, bars = [], []
+        pct = lambda x: f"{x * 100:.0f}%"  # noqa: E731
 
-        def card(name, value, target, ok, detail, source, when=None):
+        def card(name, value, target, ok, detail, source, when=None, how="", bar=None, bar_label=None):
             if value is None:
                 verdict = c.badge("Not measured yet", "muted")
             elif ok is None:
                 verdict = c.badge("Reported, no target", "info")
             else:
                 verdict = c.badge("Meets target", "ok") if ok else c.badge("Below target", "bad")
+            how_html = f'<span class="rp-how rp-how-{how}">{c.e(how)}</span>' if how else ""
             when_html = f'<small>measured {c.e(d.short_time(when))}</small>' if when else ""
             cards.append(f'<div class="rp-metric"><div class="rp-metric-top"><h4>{c.e(name)}</h4>{verdict}</div>'
                          f'<div class="rp-metric-value">{c.e(value) if value is not None else "—"}</div>'
-                         f'<div class="rp-metric-target">Target {c.e(target)}</div><p>{c.e(detail)}</p>'
+                         f'<div class="rp-metric-target">Target {c.e(target)} {how_html}</div><p>{c.e(detail)}</p>'
                          f'<div class="rp-metric-foot">{c.e(source)} {when_html}</div></div>')
+            if bar is not None:
+                bars.append((bar_label or name,) + bar)
 
-        pct = lambda x: f"{x * 100:.0f}%"  # noqa: E731
+        when = lambda k: (res.get(k) or {}).get("measured_at")  # noqa: E731
         cv, gr_ = g["citation_validity"], g["grounding_rate"]
         card("Citation validity", pct(cv) if cv is not None else None, "100%", cv == 1.0,
              f"{g['valid']}/{g['cited']} cited ids exist and are verified, over {g['runs']} released reports.",
-             "computed now from research.db")
+             "computed now from research.db", how="recorded", bar=(cv, 1.0, False) if cv is not None else None)
         card("Grounding rate", pct(gr_) if gr_ is not None else None, "≥ 95%", gr_ is not None and gr_ >= 0.95,
              f"{g['grounded']}/{g['findings']} findings whose every citation is verified and judged supported or partial.",
-             "computed now from research.db")
+             "computed now from research.db", how="recorded", bar=(gr_, 0.95, False) if gr_ is not None else None)
+        rl = (res.get("routing_live") or {}).get("data")
+        if rl and rl.get("n"):
+            card("Routing accuracy", pct(rl["accuracy"]), "≥ 90%", rl["accuracy"] >= 0.9,
+                 f"{rl['correct']}/{rl['n']} golden questions fully right: route {pct(rl['route_accuracy'])}, specialists "
+                 f"{pct(rl['specialist_accuracy'])} (Guard + code router + Planner + Orchestrator)."
+                 + (f" {rl['errors']} model errors excluded." if rl.get("errors") else ""),
+                 "eval/results/routing_live.json", when("routing_live"), how="live", bar=(rl["accuracy"], 0.9, False))
+            card("Code router alone", pct(r_off["accuracy"]), "≥ 90%", r_off["accuracy"] >= 0.9,
+                 f"{r_off['correct']}/{r_off['n']} golden questions, keywords only, incl. keyword traps.",
+                 "computed now from data/golden/questions.json", how="offline")
+        else:
+            card("Routing accuracy", pct(r_off["accuracy"]), "≥ 90%", r_off["accuracy"] >= 0.9,
+                 f"Code router: {r_off['correct']}/{r_off['n']} golden questions incl. keyword traps. "
+                 + (f"Golden questions really run: {r_rec['correct']}/{r_rec['n']} routed and staffed as expected. " if r_rec["n"] else "")
+                 + "Live Planner routing: python eval\\run_eval.py --live",
+                 "computed now from data/golden/questions.json", how="offline", bar=(r_off["accuracy"], 0.9, False),
+                 bar_label="Routing (code router)")
         live = (res.get("guardrails_live") or {}).get("data")
         regex = (res.get("guardrails") or {}).get("data")
         gsrc = live or regex
@@ -331,49 +361,104 @@ def build_app(settings: Settings) -> gr.Blocks:
                  f"{gsrc['mode']}: {round(gsrc['catch_rate'] * gsrc['attacks'])}/{gsrc['attacks']} attacks blocked."
                  + (f" Regex layer alone: {pct(regex['catch_rate'])}." if live and regex else ""),
                  "eval/results/guardrails" + ("_live" if live else "") + ".json",
-                 (res.get("guardrails_live") or res.get("guardrails"))["measured_at"])
+                 when("guardrails_live") or when("guardrails"), how="live" if live else "offline",
+                 bar=(gsrc["catch_rate"], 1.0, False))
             card("False-positive rate", pct(gsrc["false_positive_rate"]), "≤ 5%", gsrc["false_positive_rate"] <= 0.05,
-                 f"Normal questions wrongly blocked, out of {gsrc['normal']}.", "same evaluation run")
+                 f"Normal questions wrongly blocked, out of {gsrc['normal']}.", "same evaluation run",
+                 how="live" if live else "offline", bar=(gsrc["false_positive_rate"], 0.05, True))
         else:
             card("Guardrail catch rate", None, "100%", False, "Run python eval\\guardrail_eval.py --live", "not run")
+        oc = faults["output_guardrail_catch_rate"]
+        card("Output guardrail catch rate", pct(oc) if oc is not None else None, "100%", oc == 1.0 if oc is not None else False,
+             f"{faults['output_guardrail_caught']}/{faults['output_guardrail_runs']} faults planted after the Critic "
+             "(fake citation, altered quote) stopped the release." if oc is not None else
+             "Run scenario 9 (fake citation / altered quote) to measure it.",
+             "computed now from research.db", how="recorded", bar=(oc, 1.0, False) if oc is not None else None)
         retr = (res.get("retrieval") or {}).get("data")
         if retr:
             best = {r["method"]: r for r in retr}
-            hy, bm = best.get("hybrid"), best.get("bm25")
-            main = hy or bm
+            main = best.get("hybrid") or best.get("bm25")
             card("Retrieval recall@5", pct(main["recall_at_5"]), "≥ 85%", main["recall_at_5"] >= 0.85,
                  " · ".join(f"{m}: {r['found']}/{r['relevant']}" for m, r in best.items()) +
-                 (f" (embeddings: {hy['embed_provider']})" if hy else ""),
-                 "eval/results/retrieval.json", res["retrieval"]["measured_at"])
+                 (f" (embeddings: {best['hybrid']['embed_provider']})" if best.get("hybrid") else ""),
+                 "eval/results/retrieval.json", when("retrieval"), how="offline", bar=(main["recall_at_5"], 0.85, False))
         else:
             card("Retrieval recall@5", None, "≥ 85%", False, "Run python eval\\retrieval_eval.py", "not run")
-        card("Routing accuracy", None, "≥ 90%", False,
-             "Needs the golden-question evaluation (eval/run_eval.py, Phase 9). Not run yet, so no number is shown.",
-             "planned")
+        cl = (res.get("claims_live") or {}).get("data")
+        if cl and cl.get("n"):
+            card("Claim-support accuracy", pct(cl["accuracy"]), "≥ 85%", cl["accuracy"] >= 0.85,
+                 f"Judge label equals the expected one on {cl['n']} real-quote pairs; the release decision "
+                 f"(not_supported or not) is right in {pct(cl['gate_accuracy'])}.",
+                 "eval/results/claims_live.json", when("claims_live"), how="live", bar=(cl["accuracy"], 0.85, False))
+        else:
+            card("Claim-support accuracy", None, "≥ 85%", False,
+                 "12 real-quote pairs in data/golden/claim_pairs.json. Run python eval\\run_eval.py --live.", "not run", how="live")
         mem = (res.get("memory") or {}).get("data")
         if mem and mem.get("related_reports"):
             rr = mem["related_reports"]
             card("Related-report precision", pct(rr["precision"]), "none (reported)", None,
                  f"Recall {pct(rr['recall'])} at threshold {rr['threshold']} on the golden pairs.",
-                 "eval/results/memory.json", res["memory"]["measured_at"])
+                 "eval/results/memory.json", when("memory"), how="offline")
         tests = (res.get("tests") or {}).get("data")
         if tests:
             ok = tests.get("failed", 0) == 0 and tests.get("error", 0) == 0
             card("Test suite", f"{tests.get('passed', 0)} passed", "all pass", ok,
                  f"{tests.get('failed', 0)} failed, {tests.get('error', 0)} errors, {tests.get('seconds', 0):.0f} s.",
-                 "pytest, run from this page", res["tests"]["measured_at"])
+                 "pytest, run from this page", when("tests"), how="offline")
         else:
             card("Test suite", None, "all pass", False, "Press “Run the test suite” below.", "not run on this machine yet")
-        rows = ""
+
+        top = c.target_chart(bars) + f'<div class="rp-metrics">{"".join(cards)}</div>'
+
+        # 12 scenarios: a table whose rows open the run that demonstrates each one
+        scen = ev.scenario_coverage(store, settings.traces_dir)
+        shown = sum(1 for s in scen if s.how != "missing")
+        scen_rows = [[f'<b>{s.number}</b>', c.e(s.name),
+                      (c.badge("Recorded", "ok") if s.how == "recorded" else c.badge("Tests + live button", "info")
+                       if s.how == "tests" else c.badge("Not run yet", "muted")),
+                      f'{c.e(s.proof)}' + (f'<br>{c.mono(s.run_id)}' if s.run_id else "")] for s in scen]
+        scen_head = (f'<div class="rp-card-head"><h3>The 12 required scenarios</h3><span>{shown}/12 shown by stored runs or tests'
+                     f' · select a row to open its run</span></div>')
+
+        # details: reliability, routing rows, planted faults, guardrail cases
+        par, crit = ev.parallel_stats(store), ev.critic_stats(store)
+        rel_rows = [("Parallel speedup", f"median {par['median_speedup']}× over {par['runs']} runs (min {par.get('min_speedup')}×, "
+                     f"max {par.get('max_speedup')}×)" if par["runs"] else "no multi-specialist run recorded"),
+                    ("Critic", f"{crit['runs']} runs · verdicts {', '.join(f'{k} {v}' for k, v in crit['verdicts'].items()) or '—'} · "
+                     f"mean {crit['mean_rounds']} rounds · {crit['revised_runs']} needed a revision" if crit["runs"] else "no run yet"),
+                    ("Planted faults", " · ".join(f"{k.replace('_', ' ')} {v['caught']}/{v['runs']}"
+                                                  for k, v in faults["faults"].items() if v["runs"]) or "none run yet")]
+        more = c.section("Reliability, measured from stored runs", c.kv(rel_rows), "recorded")
+        if par["runs"]:
+            more += c.section("Parallel speedup per run", c.speedup_bars(par["rows"]),
+                              "sequential time ÷ wall time of the specialists")
+        rrows = (rl or {}).get("rows") or r_off["rows"]
+        rtab = "".join(
+            f'<tr><td>{c.mono(r["id"])}</td><td>{c.e(r["question"][:96])}</td><td>{c.e(r.get("path") or "—")}</td>'
+            f'<td>{c.e(", ".join(r.get("specialists") or []) or "—")}</td>'
+            f'<td>{c.badge("correct", "ok") if r.get("ok") else c.badge(r.get("why") or "wrong", "bad")}</td></tr>' for r in rrows)
+        more += (f'<details class="rp-details"><summary>Routing cases ({len(rrows)}, {"live" if rl else "code router"})</summary>'
+                 f'<table class="rp-table"><thead><tr><th>Id</th><th>Question</th><th>Route</th><th>Specialists</th><th>Result</th>'
+                 f'</tr></thead><tbody>{rtab}</tbody></table></details>')
+        if cl and cl.get("rows"):
+            ctab = "".join(f'<tr><td>{c.mono(r["id"])}</td><td>{c.e(r["claim"])}</td><td>{c.e(r["expected"])}</td>'
+                           f'<td>{c.e(r.get("got") or r.get("error", ""))}</td><td>{c.badge("correct", "ok") if r.get("ok") else c.badge("wrong", "bad")}</td></tr>'
+                           for r in cl["rows"])
+            more += (f'<details class="rp-details"><summary>Claim-support cases ({len(cl["rows"])})</summary><table class="rp-table">'
+                     f'<thead><tr><th>Id</th><th>Claim</th><th>Expected</th><th>Judge</th><th>Result</th></tr></thead>'
+                     f'<tbody>{ctab}</tbody></table></details>')
         if gsrc:
-            rows = "".join(
+            grows = "".join(
                 f'<tr><td>{c.e(r["set"])}</td><td>{c.e(r["text"][:110])}</td><td>{c.e(r.get("category") or "")}</td>'
                 f'<td>{c.e(r.get("by") or "")}</td><td>{c.badge("correct", "ok") if r["ok"] else c.badge("wrong", "bad")}</td></tr>'
                 for r in gsrc["rows"])
-            rows = (f'<details class="rp-details"><summary>Guardrail cases ({len(gsrc["rows"])})</summary>'
-                    f'<table class="rp-table"><thead><tr><th>Set</th><th>Question</th><th>Category</th><th>Decided by</th>'
-                    f'<th>Result</th></tr></thead><tbody>{rows}</tbody></table></details>')
-        return f'<div class="rp-metrics">{"".join(cards)}</div>' + rows
+            more += (f'<details class="rp-details"><summary>Guardrail cases ({len(gsrc["rows"])})</summary>'
+                     f'<table class="rp-table"><thead><tr><th>Set</th><th>Question</th><th>Category</th><th>Decided by</th>'
+                     f'<th>Result</th></tr></thead><tbody>{grows}</tbody></table></details>')
+        more += ('<p class="rp-caption"><b>recorded</b>: computed from runs stored in research.db · <b>offline</b>: golden set '
+                 'and code, repeatable without an API · <b>live</b>: real model calls on a golden set. Refresh all of them with '
+                 '<code>python eval\\run_eval.py</code> (add <code>--live</code> for the model-based parts).</p>')
+        return top, scen_head, gr.update(value=scen_rows), [s.run_id for s in scen], more
 
     def load_settings_page():
         groups = "".join(c.section(title, c.kv(items)) for title, items in d.settings_view(settings))
@@ -385,7 +470,7 @@ def build_app(settings: Settings) -> gr.Blocks:
         det = d.run_detail(store, run_id) if run_id else None
         if det is None:
             nothing = c.empty("Run not found", "It may have been removed from research.db.")
-            return (header("report"), "", nothing, "", gr.update(value=[["", ""]]), [], "", "", "", "",
+            return (header("report"), "", nothing, "", gr.update(value=[["", ""]]), [], "", "", "", "", "",
                     gr.update(value=None), "")
         r = det.report or {}
         conf = (det.state.get("confidence") or {})
@@ -411,6 +496,7 @@ def build_app(settings: Settings) -> gr.Blocks:
                                                                  "info" if origin == "memory" else "muted")])
         keys = [f"{det.run_id}/{k}" for k in det.evidence]
         plan = _plan_html(det)
+        graph = evidence_graph.graph_html(det.report, det.evidence, det.sources, det.state.get("analysis"))
         checks = _checks_html(det, conf)
         md = d.report_markdown(det)
         path = Path(tempfile.gettempdir()) / f"researchpilot_{det.run_id}.md"
@@ -418,7 +504,7 @@ def build_app(settings: Settings) -> gr.Blocks:
         return (head, banner + f'<div class="rp-reportmeta">{meta}</div>', body, "",
                 gr.update(value=evid or [["", ""]]), keys, c.empty("Select a row",
                 "See the claim, the verbatim quote highlighted in the stored page, and the source."),
-                plan, checks, md, gr.update(value=str(path)), det.run_id)
+                graph, plan, checks, md, gr.update(value=str(path)), det.run_id)
 
     def _plan_html(det) -> str:
         s = det.state
@@ -541,7 +627,7 @@ def build_app(settings: Settings) -> gr.Blocks:
     with gr.Blocks(title="ResearchPilot", fill_width=True) as demo:
         cur_run = gr.State(None)
         job_state = gr.State(None)
-        hist_ids, ov_ids, ev_keys, rep_ev_keys, mem_ids = (gr.State([]) for _ in range(5))
+        hist_ids, ov_ids, ev_keys, rep_ev_keys, mem_ids, ev_scen_ids = (gr.State([]) for _ in range(6))
         mem_sel = gr.State(None)
 
         with gr.Row(elem_id="rp-shell", equal_height=False):
@@ -578,10 +664,10 @@ def build_app(settings: Settings) -> gr.Blocks:
                     with gr.Row(equal_height=False, elem_classes="rp-ov-grid"):
                         with gr.Column(scale=3, elem_classes="rp-card"):
                             gr.HTML('<div class="rp-card-head"><h3>Recent research</h3><span>select a row to open it</span></div>')
-                            ov_table = gr.Dataframe(headers=["Question", "Status", "Confidence", "Created"],
+                            ov_table = gr.Dataframe(headers=["Question", "Status", "Conf.", "When"],
                                                     datatype=["html"] * 4, interactive=False, wrap=True,
-                                                    elem_classes="rp-df", buttons=["fullscreen"], max_height=460,
-                                                    column_widths=["56%", "24%", "10%", "10%"])
+                                                    elem_classes="rp-df rp-df-compact", max_height=520,
+                                                    column_widths=["52%", "28%", "9%", "11%"])
                         with gr.Column(scale=2, elem_classes="rp-card"):
                             gr.HTML('<div class="rp-card-head"><h3>Needs your attention</h3></div>')
                             ov_attention = gr.HTML()
@@ -659,6 +745,8 @@ def build_app(settings: Settings) -> gr.Blocks:
                                                           column_widths=["72%", "28%"])
                                 with gr.Column(scale=2, elem_classes="rp-card"):
                                     rep_chain = gr.HTML()
+                        with gr.Tab("Evidence graph"):
+                            rep_graph = gr.HTML()
                         with gr.Tab("Plan and agents"):
                             rep_plan = gr.HTML()
                         with gr.Tab("Checks and review"):
@@ -690,7 +778,8 @@ def build_app(settings: Settings) -> gr.Blocks:
                 with gr.Column(visible=False, elem_classes="rp-page") as pages["review"]:
                     rq_intro = gr.HTML()
                     rq_pick = gr.Dropdown([], label="Run to review", visible=False)
-                    with gr.Row(equal_height=False):
+                    rq_result = gr.HTML()  # outside the panes: the backend's answer stays visible when the queue empties
+                    with gr.Row(equal_height=False, visible=False) as rq_panes:
                         with gr.Column(scale=3, elem_classes="rp-card"):
                             rq_detail = gr.HTML()
                         with gr.Column(scale=2, elem_classes="rp-card rp-sticky"):
@@ -708,7 +797,6 @@ def build_app(settings: Settings) -> gr.Blocks:
                                 gr.HTML('<h3>Resume</h3><p class="rp-caption">The decision is recorded; resuming applies '
                                         'it (release checks run again).</p>')
                                 rq_resume = gr.Button("Resume this run", variant="primary")
-                            rq_result = gr.HTML()
 
                 # ---------------- Memory
                 with gr.Column(visible=False, elem_classes="rp-page") as pages["memory"]:
@@ -764,8 +852,15 @@ def build_app(settings: Settings) -> gr.Blocks:
                 # ---------------- Evaluation
                 with gr.Column(visible=False, elem_classes="rp-page") as pages["evaluation"]:
                     ev_html = gr.HTML()
+                    with gr.Column(elem_classes="rp-card"):
+                        ev_scen_head = gr.HTML()
+                        ev_scen = gr.Dataframe(headers=["#", "Scenario", "Status", "Shown by"], datatype=["html"] * 4,
+                                               interactive=False, wrap=True, elem_classes="rp-df rp-df-scen",
+                                               column_widths=["48px", "30%", "170px", "auto"], max_height=1200)
+                    ev_more = gr.HTML()
                     with gr.Row(elem_classes="rp-actions"):
                         ev_tests = gr.Button("Run the test suite", variant="secondary", size="sm")
+                        ev_refresh = gr.Button("Recompute offline metrics", variant="secondary", size="sm")
                     ev_tests_out = gr.HTML()
 
                 # ---------------- Settings
@@ -780,26 +875,27 @@ def build_app(settings: Settings) -> gr.Blocks:
 
         # one loader for all pages: components of other pages are left untouched (gr.skip)
         LOAD_OUT = [ov_metrics, ov_attention, ov_table, ov_ids, h_note, h_table, hist_ids, e_run, e_note, e_table, ev_keys,
-                    rq_intro, rq_pick, rq_detail, rq_actions, rq_resume_box, m_top, m_note, m_table, mem_ids, m_reports,
-                    m_ctx, t_run, t_top, t_blocks, ev_html, set_html, nr_conv, recent, side_status]
+                    rq_intro, rq_pick, rq_detail, rq_actions, rq_resume_box, rq_panes, m_top, m_note, m_table, mem_ids, m_reports,
+                    m_ctx, t_run, t_top, t_blocks, ev_html, ev_scen_head, ev_scen, ev_scen_ids, ev_more, set_html, nr_conv, recent,
+                    side_status]
 
         def load_page(page: str, run_for_trace=None):
             out = {k: gr.skip() for k in LOAD_OUT}
             if page == "overview":
-                out.update(zip([ov_metrics, ov_attention, ov_table, ov_ids], load_overview()))
+                out.update(zip([ov_metrics, ov_attention, ov_table, ov_ids], load_overview(), strict=True))
             elif page == "history":
-                out.update(zip([h_note, h_table, hist_ids], load_history()))
+                out.update(zip([h_note, h_table, hist_ids], load_history(), strict=True))
             elif page == "evidence":
                 out[e_run] = gr.update(choices=[("All runs", "all")] + run_choices(), value="all")
-                out.update(zip([e_note, e_table, ev_keys], load_evidence()))
+                out.update(zip([e_note, e_table, ev_keys], load_evidence(), strict=True))
             elif page == "review":
-                out.update(zip([rq_intro, rq_pick, rq_detail, rq_actions, rq_resume_box], load_review()))
+                out.update(zip([rq_intro, rq_pick, rq_detail, rq_actions, rq_resume_box, rq_panes], load_review(), strict=True))
             elif page == "memory":
-                out.update(zip([m_top, m_note, m_table, mem_ids, m_reports, m_ctx], load_memory()))
+                out.update(zip([m_top, m_note, m_table, mem_ids, m_reports, m_ctx], load_memory(), strict=True))
             elif page == "traces":
-                out.update(zip([t_run, t_top, t_blocks], load_traces(run_for_trace)))
+                out.update(zip([t_run, t_top, t_blocks], load_traces(run_for_trace), strict=True))
             elif page == "evaluation":
-                out[ev_html] = load_evaluation()
+                out.update(zip([ev_html, ev_scen_head, ev_scen, ev_scen_ids, ev_more], load_evaluation(), strict=True))
             elif page == "settings":
                 out[set_html] = load_settings_page()
             elif page == "new":
@@ -823,8 +919,8 @@ def build_app(settings: Settings) -> gr.Blocks:
         GO_OUT = page_cols + [nav, page_head] + LOAD_OUT
 
         # Navigation listens to nav.input (user clicks only), so setting the radio from code never re-navigates.
-        REPORT_OUT = [page_head, rep_banner, rep_body, rep_unused, rep_ev, rep_ev_keys, rep_chain, rep_plan, rep_checks,
-                      rep_md, rep_dl, cur_run]
+        REPORT_OUT = [page_head, rep_banner, rep_body, rep_unused, rep_ev, rep_ev_keys, rep_chain, rep_graph, rep_plan,
+                      rep_checks, rep_md, rep_dl, cur_run]
 
         def open_run(run_id):
             if not run_id:
@@ -910,9 +1006,13 @@ def build_app(settings: Settings) -> gr.Blocks:
             .then(workspace, job_state, WS_OUT, show_progress="hidden")
 
         def tick(job_id):
-            return list(workspace(job_id)) + [sidebar_status()]
+            job = jobs.get(job_id)
+            finished = job is not None and job.status != "running"
+            # the sidebar's recent runs pick up the new run as soon as it ends
+            return list(workspace(job_id)) + [sidebar_status(),
+                                              gr.update(choices=recent_choices(), value=None) if finished else gr.skip()]
 
-        timer.tick(tick, job_state, WS_OUT + [side_status], show_progress="hidden")
+        timer.tick(tick, job_state, WS_OUT + [side_status, recent], show_progress="hidden")
         ws_open.click(lambda jid: jobs.get(jid).run_id if jobs.get(jid) else None, job_state, cur_run) \
             .then(open_run, cur_run, OPEN_OUT, show_progress="hidden")
 
@@ -993,9 +1093,9 @@ def build_app(settings: Settings) -> gr.Blocks:
             job = jobs.get(job_id)
             if job and job.status != "running":
                 return [body, t] + list(load_review()) + [sidebar_status()]
-            return [body, t] + [gr.skip()] * 5 + [sidebar_status()]
+            return [body, t] + [gr.skip()] * 6 + [sidebar_status()]
 
-        RQ_OUT = [rq_result, rq_timer, rq_intro, rq_pick, rq_detail, rq_actions, rq_resume_box, side_status]
+        RQ_OUT = [rq_result, rq_timer, rq_intro, rq_pick, rq_detail, rq_actions, rq_resume_box, rq_panes, side_status]
         rq_timer.tick(rq_tick_and_refresh, rq_job, RQ_OUT, show_progress="hidden")
         # a decision that needs no model call finishes within the first second: refresh right away too
         for btn, decision in ((rq_approve, "approved"), (rq_changes, "changes_requested"), (rq_reject, "rejected")):
@@ -1040,19 +1140,34 @@ def build_app(settings: Settings) -> gr.Blocks:
                                       cwd=str(PROJECT_ROOT), capture_output=True, text=True, timeout=600)
                 text = (proc.stdout or "") + (proc.stderr or "")
             except subprocess.TimeoutExpired:
-                return c.notice("The test suite did not finish within 10 minutes.", "bad"), load_evaluation()
+                return (c.notice("The test suite did not finish within 10 minutes.", "bad"),) + load_evaluation()
             counts = d.parse_pytest_summary(text.splitlines()[-1] if text.strip() else "")
             counts["seconds"] = round(time.time() - t0, 1)
             if not counts.get("passed") and not counts.get("failed"):
-                return c.notice("Could not read the pytest result. Last output: " + text[-400:], "bad"), load_evaluation()
+                return (c.notice("Could not read the pytest result. Last output: " + text[-400:], "bad"),) + load_evaluation()
             d.EVAL_DIR.mkdir(parents=True, exist_ok=True)
             (d.EVAL_DIR / "tests.json").write_text(json.dumps(counts, indent=2), encoding="utf-8")
             tail = "\n".join(text.strip().splitlines()[-12:])
             tone = "ok" if not counts.get("failed") and not counts.get("error") else "bad"
             return (c.notice(f"{counts.get('passed', 0)} passed, {counts.get('failed', 0)} failed in "
-                             f"{counts['seconds']} s.", tone) + f'<pre class="rp-pre">{c.e(tail)}</pre>', load_evaluation())
+                             f"{counts['seconds']} s.", tone) + f'<pre class="rp-pre">{c.e(tail)}</pre>',) + load_evaluation()
 
-        ev_tests.click(run_tests, None, [ev_tests_out, ev_html])
+        EV_OUT = [ev_html, ev_scen_head, ev_scen, ev_scen_ids, ev_more]
+        ev_tests.click(run_tests, None, [ev_tests_out] + EV_OUT)
+
+        def recompute():
+            """Offline + recorded metrics (no model calls): the same code as eval/run_eval.py."""
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("run_eval", PROJECT_ROOT / "eval" / "run_eval.py")
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)  # type: ignore[union-attr]
+            summary = mod.build_summary(store, settings)
+            mod.write_markdown(summary)
+            return (c.notice("Saved eval/results/summary.json and eval/RESULTS.md from the current database.", "ok"),) \
+                + load_evaluation()
+
+        ev_refresh.click(recompute, None, [ev_tests_out] + EV_OUT)
+        ev_scen.select(pick_row, ev_scen_ids, cur_run).then(open_run, cur_run, OPEN_OUT, show_progress="hidden")
 
         demo.load(lambda: load_page("overview"), None, LOAD_OUT, show_progress="hidden")
     return demo

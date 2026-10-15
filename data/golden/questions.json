@@ -1,0 +1,25 @@
+{
+ "description": "Routing golden set (Phase 9). route/domains: what the CODE router must decide (sensitive -> human review). required: specialists that must research the question; forbidden: specialists a well-scoped plan should not use. Specialists are judged on the Planner types after the Orchestrator's assignment was validated in code (what actually runs). Traps are standard questions that contain a word a naive keyword router would flag.",
+ "questions": [
+  {"id": "q01", "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?", "route": "standard", "domains": [], "required": ["market", "technical"], "forbidden": [], "note": "primary demo question"},
+  {"id": "q02", "question": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?", "route": "standard", "domains": [], "required": ["technical"], "forbidden": [], "note": "secondary demo question"},
+  {"id": "q03", "question": "Should our bank process customer financial data with a self-hosted LLM?", "route": "sensitive", "domains": ["financial"], "required": ["risk"], "forbidden": [], "note": "scenario 3 / 11"},
+  {"id": "q04", "question": "What are the security risks of self-hosting an LLM?", "route": "standard", "domains": [], "required": ["risk"], "forbidden": ["market"], "note": "scenario 5: narrow question, no cost research"},
+  {"id": "q05", "question": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?", "route": "standard", "domains": [], "required": ["market"], "forbidden": [], "note": "cost question"},
+  {"id": "q06", "question": "Can our hospital use a cloud LLM API to summarise patient medical records?", "route": "sensitive", "domains": ["medical"], "required": ["risk"], "forbidden": [], "note": ""},
+  {"id": "q07", "question": "Should our law firm use a hosted LLM to draft litigation documents?", "route": "sensitive", "domains": ["legal"], "required": ["risk"], "forbidden": [], "note": ""},
+  {"id": "q08", "question": "Should an insurance company use an LLM to triage incoming insurance claims?", "route": "sensitive", "domains": ["financial"], "required": ["risk"], "forbidden": [], "note": ""},
+  {"id": "q09", "question": "Should a fintech startup store credit card data next to embeddings in a managed vector database?", "route": "sensitive", "domains": ["financial"], "required": ["risk"], "forbidden": [], "note": ""},
+  {"id": "q10", "question": "Should our clinic let a chatbot answer patient questions about their prescriptions?", "route": "sensitive", "domains": ["medical"], "required": ["risk"], "forbidden": [], "note": ""},
+  {"id": "q11", "question": "What are the vendor lock-in risks of building our product on a single cloud LLM provider?", "route": "standard", "domains": [], "required": ["risk"], "forbidden": [], "note": "narrow risk question"},
+  {"id": "q12", "question": "How much does it cost per month to serve 40 million tokens with a hosted API versus a rented GPU?", "route": "standard", "domains": [], "required": ["market"], "forbidden": ["risk"], "note": "narrow cost question"},
+  {"id": "q13", "question": "Which gives lower p95 latency for a chat product: a self-hosted 8B model on one GPU or a shared hosted API?", "route": "standard", "domains": [], "required": ["technical"], "forbidden": ["market"], "note": "narrow technical question"},
+  {"id": "q14", "question": "Should a 3-person team use Kafka or RabbitMQ for an event pipeline handling 2,000 messages per second?", "route": "standard", "domains": [], "required": ["technical"], "forbidden": [], "note": "outside the LLM corpus: shows the system is general"},
+  {"id": "q15", "question": "Should we fine-tune a small open model or use prompt engineering with a hosted model for customer support replies?", "route": "standard", "domains": [], "required": ["technical"], "forbidden": [], "note": ""},
+  {"id": "q16", "question": "Should we self-host Microsoft Phi-3 mini or call a hosted API for an internal coding assistant?", "route": "standard", "domains": [], "required": ["technical"], "forbidden": [], "note": "trap: 'Phi' is a model family, not protected health information"},
+  {"id": "q17", "question": "Should our tennis court booking app add an LLM chatbot for customer questions?", "route": "standard", "domains": [], "required": [], "forbidden": [], "note": "trap: 'court'"},
+  {"id": "q18", "question": "Should a trading card game startup rent cloud GPUs or use a hosted image-generation API for card art?", "route": "standard", "domains": [], "required": ["market"], "forbidden": [], "note": "trap: 'trading'"},
+  {"id": "q19", "question": "Which open-source tools help diagnose latency spikes in a self-hosted LLM inference server?", "route": "standard", "domains": [], "required": ["technical"], "forbidden": [], "note": "trap: 'diagnose'"},
+  {"id": "q20", "question": "Should a stock trading platform use a hosted LLM to summarise client portfolio activity?", "route": "sensitive", "domains": ["financial"], "required": ["risk"], "forbidden": [], "note": "real financial trading"}
+ ]
+}

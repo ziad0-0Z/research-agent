@@ -19,14 +19,19 @@ SENSITIVE_TERMS: dict[str, list[str]] = {
     "financial": [
         r"banks?", r"banking", r"financial data", r"customer financial", r"credit cards?", r"card data",
         r"payment data", r"transactions? data", r"loans?", r"mortgages?", r"account balances?",
-        r"insurance claims?", r"pci", r"anti-money laundering", r"aml", r"kyc", r"trading",
+        r"insurance claims?", r"pci", r"anti-money laundering", r"aml", r"kyc",
+        # "trading" alone also matches "trading card game": only financial trading counts
+        r"(?:stock|securities|algorithmic|forex|crypto|options) trading", r"trading (?:data|platforms?|firms?|desks?|accounts?)",
     ],
     "medical": [
-        r"patients?", r"medical records?", r"health data", r"health records?", r"clinical", r"diagnos\w*",
-        r"hospitals?", r"phi", r"hipaa", r"prescriptions?",
+        r"patients?", r"medical records?", r"health data", r"health records?", r"clinical",
+        # "diagnose latency" is engineering, not medicine; "Phi-3" is a model family, "PHI" is health data
+        r"(?:medical|clinical|patient) diagnos\w*", r"diagnos(?:is|es|ing) (?:of )?(?:patients?|diseases?|illness\w*)",
+        r"hospitals?", r"(?-i:PHI)(?!-)", r"protected health information", r"hipaa", r"prescriptions?",
     ],
     "legal": [
-        r"legal advice", r"lawsuits?", r"litigation", r"court", r"contract disputes?", r"legal liability",
+        r"legal advice", r"lawsuits?", r"litigation", r"contract disputes?", r"legal liability",
+        r"courts? (?:cases?|orders?|rulings?|filings?|proceedings?)", r"in court",  # not "tennis court"
         r"law firms?", r"attorney",
     ],
 }

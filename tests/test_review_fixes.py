@@ -80,3 +80,25 @@ def test_strength_rule_counts_pages_not_source_rows(settings):
                             contradictions=[], limitations=[], recommendation="y" * 25, impact="low")
     fixed, notes = apply_strength_rules(ctx, report, {})
     assert fixed.findings[0].strength == "moderate"
+
+
+# ---- Phase 9 review (2026-10-15) ----
+
+def test_search_records_a_provider_that_answered_with_nothing_usable(settings, monkeypatch):  # noqa: F811
+    """Tavily returned only unsafe URLs: the run moved on to DuckDuckGo, and the coverage record must say why."""
+    import dataclasses
+    s = dataclasses.replace(settings, search_mode="tavily", tavily_api_key="test")
+    ctx = AppContext(settings=s, store=Store(":memory:"), question="q")
+
+    async def tavily(ctx, query, n):
+        return [web.SearchResult("http://localhost/admin", "t", "s", "tavily")]
+
+    async def ddg(query, n):
+        return [web.SearchResult("https://example.com/a", "t", "s", "ddg")]
+
+    monkeypatch.setattr(web, "_search_tavily", tavily)
+    monkeypatch.setattr(web, "_search_ddg", ddg)
+    out = asyncio.run(web.search_web(ctx, "self hosting cost"))
+    assert out["provider"] == "ddg" and out["fallback_used"]
+    assert out["errors"] == ["tavily: no usable results"]
+    assert ctx.search_log[-1]["unavailable"] == ["tavily"]

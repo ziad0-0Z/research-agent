@@ -1,0 +1,483 @@
+{
+ "mode": "live (Guard + code router + Planner + Orchestrator)",
+ "n": 20,
+ "errors": 0,
+ "correct": 19,
+ "accuracy": 0.95,
+ "route_accuracy": 1.0,
+ "specialist_accuracy": 0.95,
+ "rows": [
+  {
+   "id": "q01",
+   "question": "Should a 5-person startup use cloud LLM APIs or self-host an open-source model?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "technology",
+   "planner_types": [
+    "market",
+    "technical",
+    "technical",
+    "risk"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q02",
+   "question": "Should we use PostgreSQL with pgvector or a dedicated vector database for a RAG product?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "technology",
+   "planner_types": [
+    "technical",
+    "market",
+    "technical"
+   ],
+   "specialists": [
+    "market",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q03",
+   "question": "Should our bank process customer financial data with a self-hosted LLM?",
+   "expected_route": "sensitive",
+   "path": "sensitive",
+   "domains": [
+    "financial"
+   ],
+   "guard_domain": "financial",
+   "planner_types": [
+    "risk",
+    "market",
+    "risk",
+    "technical"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q04",
+   "question": "What are the security risks of self-hosting an LLM?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "technology",
+   "planner_types": [
+    "risk",
+    "risk",
+    "risk"
+   ],
+   "specialists": [
+    "risk"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q05",
+   "question": "Is it cheaper for a startup to self-host an open-source LLM or pay for cloud APIs?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "business",
+   "planner_types": [
+    "market",
+    "market",
+    "technical",
+    "market"
+   ],
+   "specialists": [
+    "market",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q06",
+   "question": "Can our hospital use a cloud LLM API to summarise patient medical records?",
+   "expected_route": "sensitive",
+   "path": "sensitive",
+   "domains": [
+    "medical"
+   ],
+   "guard_domain": "medical",
+   "planner_types": [
+    "risk",
+    "risk",
+    "technical",
+    "market"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q07",
+   "question": "Should our law firm use a hosted LLM to draft litigation documents?",
+   "expected_route": "sensitive",
+   "path": "sensitive",
+   "domains": [
+    "legal"
+   ],
+   "guard_domain": "legal",
+   "planner_types": [
+    "risk",
+    "technical",
+    "market"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q08",
+   "question": "Should an insurance company use an LLM to triage incoming insurance claims?",
+   "expected_route": "sensitive",
+   "path": "sensitive",
+   "domains": [
+    "financial"
+   ],
+   "guard_domain": "financial",
+   "planner_types": [
+    "technical",
+    "risk",
+    "market"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q09",
+   "question": "Should a fintech startup store credit card data next to embeddings in a managed vector database?",
+   "expected_route": "sensitive",
+   "path": "sensitive",
+   "domains": [
+    "financial"
+   ],
+   "guard_domain": "financial",
+   "planner_types": [
+    "risk",
+    "technical",
+    "technical"
+   ],
+   "specialists": [
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q10",
+   "question": "Should our clinic let a chatbot answer patient questions about their prescriptions?",
+   "expected_route": "sensitive",
+   "path": "sensitive",
+   "domains": [
+    "medical"
+   ],
+   "guard_domain": "medical",
+   "planner_types": [
+    "risk",
+    "technical",
+    "market"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q11",
+   "question": "What are the vendor lock-in risks of building our product on a single cloud LLM provider?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "technology",
+   "planner_types": [
+    "technical",
+    "market",
+    "risk"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q12",
+   "question": "How much does it cost per month to serve 40 million tokens with a hosted API versus a rented GPU?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "technology",
+   "planner_types": [
+    "market",
+    "market",
+    "technical"
+   ],
+   "specialists": [
+    "market",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q13",
+   "question": "Which gives lower p95 latency for a chat product: a self-hosted 8B model on one GPU or a shared hosted API?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "technology",
+   "planner_types": [
+    "technical",
+    "market",
+    "risk"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": false,
+   "ok": false,
+   "why": "unexpected market"
+  },
+  {
+   "id": "q14",
+   "question": "Should a 3-person team use Kafka or RabbitMQ for an event pipeline handling 2,000 messages per second?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "technology",
+   "planner_types": [
+    "technical",
+    "technical",
+    "market"
+   ],
+   "specialists": [
+    "market",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q15",
+   "question": "Should we fine-tune a small open model or use prompt engineering with a hosted model for customer support replies?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "technology",
+   "planner_types": [
+    "market",
+    "technical",
+    "technical",
+    "risk"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q16",
+   "question": "Should we self-host Microsoft Phi-3 mini or call a hosted API for an internal coding assistant?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "technology",
+   "planner_types": [
+    "technical",
+    "market",
+    "risk"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q17",
+   "question": "Should our tennis court booking app add an LLM chatbot for customer questions?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "business",
+   "planner_types": [
+    "market",
+    "technical",
+    "market",
+    "risk"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q18",
+   "question": "Should a trading card game startup rent cloud GPUs or use a hosted image-generation API for card art?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "business",
+   "planner_types": [
+    "market",
+    "technical",
+    "technical"
+   ],
+   "specialists": [
+    "market",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q19",
+   "question": "Which open-source tools help diagnose latency spikes in a self-hosted LLM inference server?",
+   "expected_route": "standard",
+   "path": "standard",
+   "domains": [],
+   "guard_domain": "technology",
+   "planner_types": [
+    "technical",
+    "technical",
+    "market"
+   ],
+   "specialists": [
+    "market",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  },
+  {
+   "id": "q20",
+   "question": "Should a stock trading platform use a hosted LLM to summarise client portfolio activity?",
+   "expected_route": "sensitive",
+   "path": "sensitive",
+   "domains": [
+    "financial"
+   ],
+   "guard_domain": "financial",
+   "planner_types": [
+    "risk",
+    "market",
+    "technical"
+   ],
+   "specialists": [
+    "market",
+    "risk",
+    "technical"
+   ],
+   "corrections": [],
+   "route_ok": true,
+   "specialists_ok": true,
+   "ok": true,
+   "why": "ok"
+  }
+ ],
+ "at": "2026-10-15 19:16"
+}

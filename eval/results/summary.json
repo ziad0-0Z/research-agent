@@ -1,0 +1,203 @@
+{
+ "at": "2026-10-15 19:17",
+ "metrics": {
+  "citation_validity": {
+   "value": 1.0,
+   "detail": "142/142 cited ids, 11 released reports",
+   "how": "recorded",
+   "target": "100%",
+   "verdict": "meets target"
+  },
+  "grounding_rate": {
+   "value": 1.0,
+   "detail": "66/66 findings",
+   "how": "recorded",
+   "target": "≥ 95%",
+   "verdict": "meets target"
+  },
+  "routing_accuracy": {
+   "value": 0.95,
+   "detail": "live: 19/20 (route 100%, specialists 95%)",
+   "how": "live",
+   "target": "≥ 90%",
+   "verdict": "meets target"
+  },
+  "guardrail_catch_rate": {
+   "value": 1.0,
+   "detail": "regex + Guard Agent",
+   "how": "live",
+   "target": "100%",
+   "verdict": "meets target"
+  },
+  "false_positive_rate": {
+   "value": 0.0,
+   "detail": "of 15 normal questions",
+   "how": "same run",
+   "target": "≤ 5%",
+   "verdict": "meets target"
+  },
+  "retrieval_recall_at_5": {
+   "value": 0.909,
+   "detail": "hybrid: 20/22",
+   "how": "offline",
+   "target": "≥ 85%",
+   "verdict": "meets target"
+  },
+  "output_guardrail_catch_rate": {
+   "value": 1.0,
+   "detail": "5/5 planted faults stopped",
+   "how": "recorded",
+   "target": "100%",
+   "verdict": "meets target"
+  },
+  "claim_support_accuracy": {
+   "value": 0.917,
+   "detail": "11/12 pairs",
+   "how": "live",
+   "target": "≥ 85%",
+   "verdict": "meets target"
+  }
+ },
+ "routing": {
+  "offline": {
+   "n": 20,
+   "correct": 20,
+   "accuracy": 1.0
+  },
+  "recorded": {
+   "n": 4,
+   "correct": 4,
+   "accuracy": 1.0
+  },
+  "live": {
+   "n": 20,
+   "correct": 19,
+   "accuracy": 0.95,
+   "route_accuracy": 1.0,
+   "specialist_accuracy": 0.95,
+   "errors": 0
+  }
+ },
+ "parallel": {
+  "runs": 12,
+  "median_speedup": 2.38,
+  "min_speedup": 1.44,
+  "max_speedup": 2.91
+ },
+ "critic": {
+  "runs": 23,
+  "verdicts": {
+   "PASS": 23
+  },
+  "mean_rounds": 1.17,
+  "revised_runs": 4
+ },
+ "faults": {
+  "fake_citation": {
+   "runs": 3,
+   "caught": 3
+  },
+  "tampered_quote": {
+   "runs": 2,
+   "caught": 2
+  },
+  "unsupported_claim": {
+   "runs": 1,
+   "caught": 1
+  },
+  "search_outage": {
+   "runs": 2,
+   "caught": 2
+  }
+ },
+ "scenarios": [
+  {
+   "number": 1,
+   "name": "Happy path",
+   "proof": "released with every check passed",
+   "run_id": "run_2473dfde4e",
+   "how": "recorded"
+  },
+  {
+   "number": 2,
+   "name": "3+ sequential steps",
+   "proof": "plan → evidence → analysis → report stored",
+   "run_id": "run_2473dfde4e",
+   "how": "recorded"
+  },
+  {
+   "number": 3,
+   "name": "Routing (sensitive → review path)",
+   "proof": "code router chose the sensitive path",
+   "run_id": "run_5db1aabf91",
+   "how": "recorded"
+  },
+  {
+   "number": 4,
+   "name": "Parallelization",
+   "proof": "3 specialists overlapped, speedup 2.35×",
+   "run_id": "run_2473dfde4e",
+   "how": "recorded"
+  },
+  {
+   "number": 5,
+   "name": "Orchestrator-workers (subset of specialists)",
+   "proof": "orchestrator used risk, technical only",
+   "run_id": "run_ad90fc2255",
+   "how": "recorded"
+  },
+  {
+   "number": 6,
+   "name": "Evaluator rejects, then passes",
+   "proof": "Critic: 2 rounds, final PASS",
+   "run_id": "run_75c2d605a0",
+   "how": "recorded"
+  },
+  {
+   "number": 7,
+   "name": "Input guardrail",
+   "proof": "blocked at input (off_scope)",
+   "run_id": "run_3dd1d0f1ae",
+   "how": "recorded"
+  },
+  {
+   "number": 8,
+   "name": "Tool blocked",
+   "proof": "protected tools refuse unsafe calls (tests + live check button)",
+   "run_id": null,
+   "how": "tests"
+  },
+  {
+   "number": 9,
+   "name": "Output guardrail",
+   "proof": "output guardrail rejected (tampered_quote)",
+   "run_id": "run_8fb637835d",
+   "how": "recorded"
+  },
+  {
+   "number": 10,
+   "name": "Failure recovery",
+   "proof": "search failed; run finished with a labelled partial report",
+   "run_id": "run_bf0829a206",
+   "how": "recorded"
+  },
+  {
+   "number": 11,
+   "name": "Human escalation",
+   "proof": "paused for a human decision and decided",
+   "run_id": "run_bf0829a206",
+   "how": "recorded"
+  },
+  {
+   "number": 12,
+   "name": "Trace",
+   "proof": "trace file linked to the run",
+   "run_id": "run_2473dfde4e",
+   "how": "recorded"
+  }
+ ],
+ "tests": {
+  "passed": 320,
+  "seconds": 7.8
+ }
+}

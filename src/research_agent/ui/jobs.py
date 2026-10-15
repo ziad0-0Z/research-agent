@@ -95,9 +95,12 @@ class JobManager:
 
         async def go() -> str:
             store = Store(run_settings.db_path)
-            result = await run_research(question, settings=run_settings, store=store, on_event=job.add,
-                                        demo_fault=demo_fault, run_id=run_id,
-                                        session_id=session_id or f"s_{uuid.uuid4().hex[:10]}")
+            try:
+                result = await run_research(question, settings=run_settings, store=store, on_event=job.add,
+                                            demo_fault=demo_fault, run_id=run_id,
+                                            session_id=session_id or f"s_{uuid.uuid4().hex[:10]}")
+            finally:
+                store.close()  # one connection per job: do not leak it for the life of the app
             return result.status
 
         return self._submit(job, go)
@@ -107,7 +110,11 @@ class JobManager:
         job = Job(id=uuid.uuid4().hex[:8], kind="resume", run_id=run_id, question=question)
 
         async def go() -> str:
-            result = await resume_run(run_id, settings=settings, store=Store(settings.db_path), on_event=job.add)
+            store = Store(settings.db_path)
+            try:
+                result = await resume_run(run_id, settings=settings, store=store, on_event=job.add)
+            finally:
+                store.close()
             return result.status
 
         return self._submit(job, go)

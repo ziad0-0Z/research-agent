@@ -9,7 +9,7 @@ Agentic AI Final Project — Project 3.
 | [`docs/REQUIREMENTS_MATRIX.md`](docs/REQUIREMENTS_MATRIX.md) | Every brief requirement → code → test → demo scenario |
 | [`eval/METRICS.md`](eval/METRICS.md) | Metric definitions and test sets |
 
-> Status: **Phase 5 (guardrails + human review)** — input guardrail (regex + Guard Agent), code router, Planner, LLM Orchestrator, 3 parallel specialists, Evidence Analyst, Writer, Critic loop (verdict decided in code), hybrid BM25 + embedding retrieval, computed confidence, output guardrail + report-bound approval token, impact gate, persisted human review queue with resume.
+> Status: **Phases 0–9 and 11 built** (Phase 10 docs + slides next). Core: input guardrail (regex + Guard Agent), code router, Planner, LLM Orchestrator, 3 parallel specialists, Evidence Analyst, Writer, Critic loop (verdict decided in code), hybrid BM25 + embedding retrieval, computed confidence, output guardrail + report-bound approval token, impact gate, persisted human review queue with resume, long-term + session memory, reliability record and tracing, the ResearchPilot UI, the evaluation suite and the evidence graph.
 
 ## Setup (Windows, cmd)
 
@@ -162,6 +162,22 @@ explorer, Review queue, Memory, Traces, Evaluation, Settings. Runs started here 
 
 Failure recovery demo (scenario 10): `python scripts\run_research.py --fault search_outage`
 
+Each report has an **Evidence graph** tab (Phase 11): sources → verified quotes → findings, line style = how the
+Critic judged each quote, red arcs = contradictions the Evidence Analyst found. Built from the stored run only.
+
+### Evaluation (Phase 9)
+
+```cmd
+python eval\run_eval.py                    :: offline + recorded runs: no API calls, about 2 s
+python eval\run_eval.py --live --limit 5   :: + live routing (Guard, Planner, Orchestrator) and claim-support judge
+python eval\run_eval.py --live             :: all 20 golden questions + 12 claim pairs (~100 model calls)
+python eval\run_eval.py --tests --samples  :: + pytest result, + export released reports to samples\
+```
+
+Writes `eval/results/*.json` and `eval/RESULTS.md`; the app's Evaluation page shows the same numbers and the 12
+required scenarios, each linked to the stored run that demonstrates it. Every number says how it was measured:
+**recorded** (research.db), **offline** (golden set + code) or **live** (model calls). Unmeasured = "not measured".
+
 ## Layout so far
 
 ```
@@ -189,8 +205,12 @@ src/research_agent/
                resume), session.py (follow-ups with SQLiteSession)
 data/corpus/   15 synthetic test pages (see its README)
 data/golden/   retrieval.json (recall@5 test set), guardrails.json (attacks + normal questions),
-               memory_pairs.json (related questions + reuse gate)
-eval/          METRICS.md, retrieval_eval.py, guardrail_eval.py, memory_eval.py
+               memory_pairs.json (related questions + reuse gate), questions.json (routing: 20 questions incl.
+               keyword traps), claim_pairs.json (12 real corpus quotes + claims, for the support judge)
+eval/          METRICS.md, RESULTS.md (generated), run_eval.py (everything), retrieval_eval.py, guardrail_eval.py,
+               memory_eval.py
+src/research_agent/evaluation.py   shared metric code (CLI + Evaluation page)
+src/research_agent/ui/             Gradio app; evidence_graph.py (Phase 11)
 scripts/       smoke_test.py, check_models.py, phase1_check.py, run_research.py, review.py, memory.py
 tests/
 ```

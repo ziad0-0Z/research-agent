@@ -109,6 +109,9 @@ async def search_web(ctx: AppContext, query: str, max_results: int = 5) -> dict:
             if r.url and r.url not in seen and check_url(r.url).allowed:
                 seen.add(r.url)
                 unique.append(r)
+        if not unique and provider != "offline":
+            # answered, but nothing usable (no results, or every URL failed the safety check): record why we moved on
+            errors.append(f"{provider}: no usable results")
         if unique or provider == "offline":
             ctx.log_tool("search_web", True, f"{provider}: {len(unique)} results for {query!r}")
             _log_search(ctx, specialist, provider, providers, errors)

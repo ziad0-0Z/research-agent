@@ -1,0 +1,118 @@
+{
+ "mode": "live (Claim Support Judge)",
+ "n": 12,
+ "errors": 0,
+ "accuracy": 0.917,
+ "gate_accuracy": 1.0,
+ "rows": [
+  {
+   "id": "c01",
+   "claim": "Running a self-hosted model in production took 0.25 to 0.5 of a full-time engineer in the studied deployments.",
+   "expected": "supported",
+   "got": "supported",
+   "reason": "The quote directly states that keeping a self-hosted model reliable in production required 0.25 to 0.5 of a full-time engineer across the studied deployments, matching the claim entirely.",
+   "ok": true,
+   "gate_ok": true
+  },
+  {
+   "id": "c02",
+   "claim": "For every company, engineering labour is the largest cost of running an LLM.",
+   "expected": "partial",
+   "got": "partial",
+   "reason": "The claim generalizes engineering labour being the largest cost to 'every company', whereas the quote only states this for 'small teams'.",
+   "ok": true,
+   "gate_ok": true
+  },
+  {
+   "id": "c03",
+   "claim": "Self-hosting is always cheaper than hosted APIs.",
+   "expected": "not_supported",
+   "got": "not_supported",
+   "reason": "The quote states that hosted APIs have a lower TCO below a certain threshold, which directly contradicts the claim that self-hosting is always cheaper.",
+   "ok": true,
+   "gate_ok": true
+  },
+  {
+   "id": "c04",
+   "claim": "Small and mid-sized hosted models cost between $0.10 and $0.60 per million input tokens.",
+   "expected": "supported",
+   "got": "supported",
+   "reason": "The quote directly states that small and mid-sized models are priced between $0.10 and $0.60 per million input tokens, which matches the claim.",
+   "ok": true,
+   "gate_ok": true
+  },
+  {
+   "id": "c05",
+   "claim": "Startups typically process about 400 million tokens per month.",
+   "expected": "not_supported",
+   "got": "not_supported",
+   "reason": "The claim states startups typically process 400 million tokens per month, whereas the quote specifies a median of 40 million tokens per month for a very specific sample of twelve startups with fewer than ten employees.",
+   "ok": true,
+   "gate_ok": true
+  },
+  {
+   "id": "c06",
+   "claim": "Batch pricing cuts API costs by 30 to 50 percent for every workload.",
+   "expected": "partial",
+   "got": "partial",
+   "reason": "The claim states that batch pricing cuts API costs by 30 to 50 percent for every workload, but the quote specifies this reduction only applies to workloads that do not need real-time answers.",
+   "ok": true,
+   "gate_ok": true
+  },
+  {
+   "id": "c07",
+   "claim": "For short prompts, a dedicated GPU deployment had a lower median time-to-first-token than shared APIs.",
+   "expected": "supported",
+   "got": "supported",
+   "reason": "The quote directly states that for short prompts, the dedicated deployment had a median time-to-first-token of about 120 milliseconds compared to 250 to 600 milliseconds for shared APIs, which fully supports the claim that the dedicated GPU deployment had a lower median time-to-first-token.",
+   "ok": true,
+   "gate_ok": true
+  },
+  {
+   "id": "c08",
+   "claim": "A dedicated GPU keeps latency low at any number of concurrent requests.",
+   "expected": "not_supported",
+   "got": "not_supported",
+   "reason": "The quote directly contradicts the claim by stating that latency rose sharply once concurrent requests exceeded the GPU's capacity.",
+   "ok": true,
+   "gate_ok": true
+  },
+  {
+   "id": "c09",
+   "claim": "Many API providers keep prompts for up to 30 days to detect abuse.",
+   "expected": "supported",
+   "got": "partial",
+   "reason": "The quote mentions retaining both prompts and outputs, while the claim only refers to prompts.",
+   "ok": false,
+   "gate_ok": true
+  },
+  {
+   "id": "c10",
+   "claim": "Self-hosting an LLM removes a bank's compliance obligations for customer financial data.",
+   "expected": "not_supported",
+   "got": "not_supported",
+   "reason": "The quote directly contradicts the claim by stating that self-hosting does not remove compliance obligations.",
+   "ok": true,
+   "gate_ok": true
+  },
+  {
+   "id": "c11",
+   "claim": "pgvector keeps query latency under 20 milliseconds at any scale.",
+   "expected": "partial",
+   "got": "partial",
+   "reason": "The quote states that query latency stays under 20 milliseconds up to about 10 million vectors, whereas the claim generalizes this to \"at any scale\".",
+   "ok": true,
+   "gate_ok": true
+  },
+  {
+   "id": "c12",
+   "claim": "Unauthenticated self-hosted inference endpoints have been found exposed on the public internet.",
+   "expected": "supported",
+   "got": "supported",
+   "reason": "The quote explicitly states that exposed inference endpoints without authentication have been found on the public internet, which directly matches the claim.",
+   "ok": true,
+   "gate_ok": true
+  }
+ ],
+ "at": "2026-10-15 19:17"
+}
