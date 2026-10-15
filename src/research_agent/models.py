@@ -337,6 +337,7 @@ class WorkerFindings(BaseModel):
     error: str | None = None
     started_at: float
     finished_at: float
+    attempts: int = 1
 
     @property
     def duration(self) -> float:

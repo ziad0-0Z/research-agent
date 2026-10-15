@@ -229,7 +229,7 @@ def test_pipeline_end_to_end_offline(settings):
     assert [w.status for w in result.workers] == ["success", "success", "success"]
     # The fake Writer keeps inventing ev999: REVISE, then the same blocking issue again → FAIL (no progress).
     assert events == ["input_checked", "routed", "planned", "delegated", "research_started", "research_done",
-                      "analysed", "drafted", "critic_round", "revised", "critic_round", "critic_done", "checked",
+                      "analysed", "coverage", "drafted", "critic_round", "revised", "critic_round", "critic_done", "checked",
                       "output_checked", "rejected"]
     # The Critic could not fix ev999, so the output guardrail refuses to release the report.
     assert result.status == "rejected_by_guardrail" and result.final_markdown is None

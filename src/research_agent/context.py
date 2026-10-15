@@ -31,6 +31,7 @@ class ToolCallRecord:
     ok: bool
     summary: str
     at: float = field(default_factory=time.time)
+    specialist: str | None = None  # which research worker made the call (None outside parallel research)
 
 
 @dataclass
@@ -71,7 +72,7 @@ class AppContext:
         return f"{prefix}{n}"
 
     def log_tool(self, tool: str, ok: bool, summary: str) -> None:
-        self.tool_log.append(ToolCallRecord(tool, ok, summary[:300]))
+        self.tool_log.append(ToolCallRecord(tool, ok, summary[:300], specialist=CURRENT_SPECIALIST.get()))
 
     def tools_succeeded(self, tool: str) -> int:
         return sum(1 for r in self.tool_log if r.tool == tool and r.ok)

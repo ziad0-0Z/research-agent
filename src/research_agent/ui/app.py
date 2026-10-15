@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -112,7 +113,7 @@ def build_app(settings: Settings) -> gr.Blocks:
         job = jobs.active()
         parts = []
         if job:
-            parts.append(f'<div class="rp-side-job">{c.badge("Running", "info")}<span>{c.e(job.question[:70])}</span>'
+            parts.append(f'<div class="rp-side-job">{c.badge("Running", "info")}<span>{c.e(c.clip(job.question, 70))}</span>'
                          f'<small>{job.elapsed:.0f} s · {c.e(job.run_id)}</small></div>')
         n = len(store.pending_reviews())
         if n:
@@ -120,14 +121,22 @@ def build_app(settings: Settings) -> gr.Blocks:
         llm_ok = bool(settings.llm_api_key) or settings.llm_mode == "replay"
         parts.append(f'<div class="rp-side-conn"><span class="{"on" if llm_ok else "off"}">'
                      f'{c.e(settings.llm_provider)} {"key set" if llm_ok else "key missing"}</span>'
-                     f'<span class="on">memory {c.e(settings.memory_mode)}</span></div>')
+                     f'<span class="on">memory {c.e(settings.memory_mode)}</span>{search_status()}</div>')
         return "".join(parts)
+
+    def search_status() -> str:
+        if settings.search_mode == "offline":
+            return '<span class="off" title="Live search is off in .env (SEARCH_MODE=offline)">search offline</span>'
+        if settings.search_mode == "tavily" and not settings.tavily_api_key:
+            return ('<span class="off" title="TAVILY_API_KEY is empty: searches fall back to DuckDuckGo">'
+                    'tavily key missing</span>')
+        return f'<span class="on">search {c.e(settings.search_mode)}</span>'
 
     def recent_choices() -> list[tuple[str, str]]:
         out = []
         for r in d.run_rows(store, limit=8):
             label, _ = d.status_meta(r.status)
-            out.append((f"{(r.title or r.question)[:46]}", r.run_id))
+            out.append((c.clip(r.title or r.question, 46), r.run_id))
         return out
 
     def run_table(rows) -> tuple[list[list[str]], list[str]]:
@@ -140,7 +149,9 @@ def build_app(settings: Settings) -> gr.Blocks:
             c.stat("Reports released", m["completed"], f"of {m['runs']} runs"),
             c.stat("Awaiting review", m["pending_reviews"], "held before release", "warn" if m["pending_reviews"] else ""),
             c.stat("Verified evidence", m["verified_evidence"], f"{m['memory_active']} kept in memory"),
-            c.stat("Needs attention", m["needs_attention"],
+            # "Needs attention" (the history filter and the panel) = awaiting review + failed/rejected; this card
+            # counts only the failures, so it carries its own name instead of reusing that label.
+            c.stat("Failed or rejected", m["needs_attention"],
                    "failed, or rejected for a real problem" + (f" · {m['demo_faults_stopped']} planted faults stopped"
                                                                if m["demo_faults_stopped"] else ""),
                    "bad" if m["needs_attention"] else ""),
@@ -159,19 +170,21 @@ def build_app(settings: Settings) -> gr.Blocks:
         return note, gr.update(value=table or [["", "", "", "", "", ""]]), ids
 
     def run_choices() -> list[tuple[str, str]]:
-        return [(f"{(r.title or r.question)[:70]} — {r.run_id}", r.run_id) for r in d.run_rows(store, limit=300)]
+        return [(f"{c.clip(r.title or r.question, 70)} — {r.run_id}", r.run_id) for r in d.run_rows(store, limit=300)]
 
     def load_evidence(query="", support="all", origin="all", run="all"):
         rows = d.evidence_rows(store, query=query, support=support, origin=origin, run_id=run or "all")
-        table = [[f'<div class="rp-cell-q"><b>{c.e(r["claim"][:170])}</b><span>“{c.e(r["quote"][:150])}”</span>'
-                  f'<small>{c.mono(r["id"])} {c.mono(r["run_id"])} · {c.e(c.urlhost(r["url"]))} · quality {r["quality"]:.2f}</small></div>',
-                  c.support_badge(r["support"]) + c.badge(c.ORIGIN.get(r["origin"], r["origin"]),
-                                                          "info" if r["origin"] == "memory" else "muted")]
-                 for r in rows[:400]]
-        more = " (showing the first 400)" if len(rows) > 400 else ""
-        note = (f'<p class="rp-count">{len(rows)} evidence item{"s" if len(rows) != 1 else ""}{more}</p>'
-                if rows else c.empty("No evidence matches", "Try fewer filters."))
-        return note, gr.update(value=table or [["", ""]]), [r["key"] for r in rows[:400]]
+        table = c.evidence_table_rows(rows[:400])
+        more = " · showing the first 400" if len(rows) > 400 else ""
+        counts = {k: sum(1 for r in rows if r["support"] == k) for k in ("supported", "partial", "not_supported")}
+        mem = sum(1 for r in rows if r["origin"] == "memory")
+        chips = (f'<span class="rp-count-chips">{c.support_badge("supported")} {counts["supported"]} '
+                 f'{c.support_badge("partial")} {counts["partial"]} {c.support_badge("not_supported")} '
+                 f'{counts["not_supported"]} {c.badge("From memory", "info")} {mem}</span>')
+        note = (f'<div class="rp-count-row"><p class="rp-count">{len(rows)} evidence item{"s" if len(rows) != 1 else ""}'
+                f'{more} · select a row to see its quote in the source page</p>{chips}</div>'
+                if rows else c.empty("No evidence matches", "Clear the search or pick other filters."))
+        return note, gr.update(value=table or [[""] * 6]), [r["key"] for r in rows[:400]]
 
     def load_review():
         pend = d.pending(store)
@@ -180,7 +193,7 @@ def build_app(settings: Settings) -> gr.Blocks:
             rv = store.get_review(r.run_id)
             if rv and rv.status != "pending":
                 waiting.append((r, rv))
-        choices = [(f"{(p['title'] or p['question'])[:80]} — {p['run_id']}", p["run_id"]) for p in pend]
+        choices = [(f"{c.clip(p['title'] or p['question'], 80)} — {p['run_id']}", p["run_id"]) for p in pend]
         choices += [(f"Decided ({rv.status.replace('_', ' ')}), not yet resumed — {r.run_id}", r.run_id)
                     for r, rv in waiting]
         intro = (c.empty("The queue is empty", "Runs pause here when the topic is sensitive, the impact is high, "
@@ -188,6 +201,11 @@ def build_app(settings: Settings) -> gr.Blocks:
                  if not choices else f'<p class="rp-count">{len(pend)} awaiting a decision'
                  f'{f", {len(waiting)} decided but not resumed" if waiting else ""}</p>')
         first = choices[0][1] if choices else None
+        job = jobs.active()
+        if job and choices:
+            intro += c.notice(f"A research run is in progress ({job.elapsed:.0f} s so far). Decisions wait until it "
+                              f"finishes, because applying one re-runs the release checks. You can read the report "
+                              f"now and decide when the run ends.", "warn")
         return ((intro, gr.update(choices=choices, value=first, visible=bool(choices))) + review_detail(first)
                 + (gr.update(visible=bool(choices)),))  # no empty panes when the queue is empty
 
@@ -227,7 +245,7 @@ def build_app(settings: Settings) -> gr.Blocks:
                        c.stat("Superseded or retired", sum(1 for r in all_rows if r["status"] in ("superseded", "retired")),
                               "kept for the record, never reused"),
                        c.stat("Contested", contested, "disagreement kept, not deleted")])
-        table = [[f'<div class="rp-cell-q"><b>{c.e(r["claim"][:170])}</b>'
+        table = [[f'<div class="rp-cell-q"><b>{c.e(c.clip(r["claim"], 170))}</b>'
                   f'<small>{c.mono(r["mem_id"])} {c.e(r["claim_type"])} · {c.e(r["source_host"])}</small></div>',
                   c.badge(*c.MEM_STATUS.get(r["status"], (r["status"], "muted"))) +
                   ((c.badge(f"Fresh, {r['days_left']} days left", "ok") if r["fresh"] else
@@ -296,8 +314,16 @@ def build_app(settings: Settings) -> gr.Blocks:
                           "tracing existed, or runs made on another machine, have none.")
             return (msg + parallel + rel_html, "")
         summaries = [(load_summary(entry), how) for entry, how in found]
-        top = trace_html.totals([s for s, _ in summaries])
-        blocks = "".join(trace_html.trace_block(s, how) for s, how in summaries)
+        if rel and "fetch" not in rel:
+            # runs recorded before fetch failures were tracked: count them from the trace instead
+            calls = sum(sm.tool_calls.get("scrape_page", 0) for sm, _ in summaries)
+            failed = sum(1 for sm, _ in summaries for x in sm.errors if x["span"] == "scrape_page")
+            rel = {**rel, "fetch": {"calls": calls, "failed": failed, "reasons": []}}
+            rel_html = _reliability_html(rel)
+        from ..workflows.reliability import error_count
+        failed_workers = {w["specialist"] for w in rel.get("workers", []) if w.get("status") in ("failed", "timeout")}
+        top = trace_html.totals([s for s, _ in summaries], app_errors=error_count(rel))
+        blocks = "".join(trace_html.trace_block(s, how, failed_workers=failed_workers) for s, how in summaries)
         return (top + parallel + rel_html, blocks)
 
     def load_evaluation():
@@ -434,7 +460,7 @@ def build_app(settings: Settings) -> gr.Blocks:
                               "sequential time ÷ wall time of the specialists")
         rrows = (rl or {}).get("rows") or r_off["rows"]
         rtab = "".join(
-            f'<tr><td>{c.mono(r["id"])}</td><td>{c.e(r["question"][:96])}</td><td>{c.e(r.get("path") or "—")}</td>'
+            f'<tr><td>{c.mono(r["id"])}</td><td>{c.e(c.clip(r["question"], 96))}</td><td>{c.e(r.get("path") or "—")}</td>'
             f'<td>{c.e(", ".join(r.get("specialists") or []) or "—")}</td>'
             f'<td>{c.badge("correct", "ok") if r.get("ok") else c.badge(r.get("why") or "wrong", "bad")}</td></tr>' for r in rrows)
         more += (f'<details class="rp-details"><summary>Routing cases ({len(rrows)}, {"live" if rl else "code router"})</summary>'
@@ -449,7 +475,7 @@ def build_app(settings: Settings) -> gr.Blocks:
                      f'<tbody>{ctab}</tbody></table></details>')
         if gsrc:
             grows = "".join(
-                f'<tr><td>{c.e(r["set"])}</td><td>{c.e(r["text"][:110])}</td><td>{c.e(r.get("category") or "")}</td>'
+                f'<tr><td>{c.e(r["set"])}</td><td>{c.e(c.clip(r["text"], 110))}</td><td>{c.e(r.get("category") or "")}</td>'
                 f'<td>{c.e(r.get("by") or "")}</td><td>{c.badge("correct", "ok") if r["ok"] else c.badge("wrong", "bad")}</td></tr>'
                 for r in gsrc["rows"])
             more += (f'<details class="rp-details"><summary>Guardrail cases ({len(gsrc["rows"])})</summary>'
@@ -480,7 +506,11 @@ def build_app(settings: Settings) -> gr.Blocks:
             ("Status", c.status_badge(det.status)),
             ("Confidence", c.meter(conf.get("score"), settings.review_confidence_threshold)),
             ("Impact", c.e(r.get("impact", "—"))),
-            ("Cited evidence", f"{len(cited)}" + (f" ({reused} from memory)" if reused else "")),
+            # one wording everywhere: "reused from memory" = items memory put into the run (history badge);
+            # how many of the CITED ones came from memory is said separately
+            ("Cited evidence", f"{len(cited)}" + (f" ({reused} of them from memory)" if reused else "")
+             + (f" · {len(det.state.get('memory_reuse') or {})} reused from memory into the run"
+                if det.state.get("memory_reuse") else "")),
             ("Created", c.e(d.short_time(det.created_at))),
             ("Run", c.mono(det.run_id)),
         ], raw=True)
@@ -490,7 +520,7 @@ def build_app(settings: Settings) -> gr.Blocks:
         evid = []
         for k, v in det.evidence.items():
             origin = "memory" if v.get("memory") else (det.sources.get(v["source_id"]) or {}).get("origin", "")
-            evid.append([f'<div class="rp-cell-q"><b>{c.e(v["claim"][:160])}</b><span>“{c.e(v["quote"][:130])}”</span>'
+            evid.append([f'<div class="rp-cell-q"><b>{c.e(c.clip(v["claim"], 160))}</b><span>“{c.e(c.clip(v["quote"], 130))}”</span>'
                          f'<small>{c.mono(k)} {"cited in the report" if k in cited else "not cited"}</small></div>',
                          c.support_badge(v["support"]) + c.badge(c.ORIGIN.get(origin, origin),
                                                                  "info" if origin == "memory" else "muted")])
@@ -560,6 +590,11 @@ def build_app(settings: Settings) -> gr.Blocks:
         if oc:
             rows.append(("Output guardrail", c.badge("passed" if oc.get("passed") else "rejected", "ok" if oc.get("passed") else "bad")
                          + f' <small>{c.e(", ".join(oc.get("checks_run", [])))}</small>'))
+        cov = c.coverage_state(det)
+        if cov:
+            total = len(cov["covered"]) + len(cov["missing"])
+            rows.append(("Coverage", f'{len(cov["covered"])} of {total} subquestions have evidence'
+                         + (" · recommendation withheld (too little coverage)" if s.get("recommendation_withheld") else "")))
         if s.get("gate_reasons") is not None and oc.get("passed"):
             rows.append(("Impact gate", c.e("; ".join(s["gate_reasons"])) or "no review needed"))
         out = c.section("Checks this run passed through", c.kv(rows, raw=True) if rows else
@@ -571,7 +606,11 @@ def build_app(settings: Settings) -> gr.Blocks:
                 ("Mean source quality", str(conf.get("source_quality"))),
                 ("Contradiction penalty", str(conf.get("contradiction_penalty"))),
                 ("Worker factor", str(conf.get("worker_factor"))),
-            ], raw=True) + f'<p class="rp-caption">{c.e(conf.get("explanation", ""))}</p>')
+                ("Independent sites", (f'{conf["independent_sources"]} (factor ×{conf.get("corroboration")})'
+                                       if "independent_sources" in conf else "not recorded (older run)")),
+                ("Findings backed by 2+ sites", c.e(str(conf.get("corroborated_findings", "—")))),
+            ], raw=True) + f'<p class="rp-caption">{c.e(conf.get("explanation", ""))}</p>'
+              f'<p class="rp-caption">{c.e(c.CONFIDENCE_HELP)}</p>')
         hist = s.get("review_history") or []
         if hist or det.review:
             items = "".join(f'<li>{c.badge(h["decision"].replace("_", " "), "muted")} {c.e(d.short_time(h["decided_at"]))} '
@@ -697,7 +736,9 @@ def build_app(settings: Settings) -> gr.Blocks:
                                                       label="Conversation", scale=3,
                                                       info="Continue one to ask a follow-up (session memory).")
                             nr_live = gr.Checkbox(False, label="Search the live web (Tavily → DuckDuckGo → offline corpus)",
-                                                  info="Off: the bundled offline corpus, reproducible for demos.")
+                                                  info="Off: the bundled offline corpus, reproducible for demos. It "
+                                                       "only covers LLM hosting, API costs and vector databases; "
+                                                       "turn this on for any other topic.")
                             with gr.Row():
                                 nr_start = gr.Button("Start research", variant="primary", elem_id="rp-start")
                                 nr_toolcheck = gr.Button("Run the tool safety checks", visible=False)
@@ -765,20 +806,21 @@ def build_app(settings: Settings) -> gr.Blocks:
                         e_run = gr.Dropdown([("All runs", "all")], value="all", show_label=False, scale=3,
                                             container=False)
                     e_note = gr.HTML()
-                    with gr.Row(equal_height=False):
-                        with gr.Column(scale=3):
-                            e_table = gr.Dataframe(headers=["Claim, quote and source", "Support and origin"],
-                                                   datatype=["html"] * 2, interactive=False, wrap=True,
-                                                   elem_classes="rp-df", buttons=["fullscreen"], max_height=680, column_widths=["74%", "26%"])
-                        with gr.Column(scale=2, elem_classes="rp-card rp-sticky"):
-                            e_detail = gr.HTML(c.empty("Select a row", "See the evidence chain: claim → verbatim quote → "
-                                                       "the quote in the stored page → source."))
+                    # laid out like Research history: one full-width table, the selected item opens below it
+                    e_table = gr.Dataframe(headers=c.EVIDENCE_HEADERS, datatype=["html"] * 6, interactive=False,
+                                           wrap=True, elem_classes="rp-df", buttons=["fullscreen"], max_height=520,
+                                           column_widths=["46%", "130px", "130px", "170px", "84px", "128px"])
+                    with gr.Column(elem_classes="rp-card rp-ev-detail"):
+                        e_detail = gr.HTML(c.empty("Select a row", "See the evidence chain: claim → verbatim quote → "
+                                                   "the quote in the stored page → source."))
 
                 # ---------------- Review queue
                 with gr.Column(visible=False, elem_classes="rp-page") as pages["review"]:
+                    # the last decision's outcome sits ABOVE the picker: it is about the run just decided,
+                    # not the next run shown in the panes below
+                    rq_result = gr.HTML()
                     rq_intro = gr.HTML()
-                    rq_pick = gr.Dropdown([], label="Run to review", visible=False)
-                    rq_result = gr.HTML()  # outside the panes: the backend's answer stays visible when the queue empties
+                    rq_pick = gr.Dropdown([], label="Next run to review", visible=False)
                     with gr.Row(equal_height=False, visible=False) as rq_panes:
                         with gr.Column(scale=3, elem_classes="rp-card"):
                             rq_detail = gr.HTML()
@@ -829,9 +871,8 @@ def build_app(settings: Settings) -> gr.Blocks:
                                     m_detail = gr.HTML(c.empty("Select an item"))
                                     m_delete = gr.Button("Delete from memory", variant="stop", visible=False, size="sm")
                                     with gr.Column(visible=False, elem_classes="rp-confirm") as m_confirm:
-                                        gr.HTML('<p><b>Delete this item permanently?</b> It is tombstoned: committing an '
-                                                'old run again cannot bring it back. New research may still find the '
-                                                'same quote.</p>')
+                                        gr.HTML('<p><b>Delete this item permanently?</b> Re-saving an old run will not bring '
+                                                'it back. New research may still find the same quote.</p>')
                                         with gr.Row():
                                             m_yes = gr.Button("Delete permanently", variant="stop", size="sm")
                                             m_no = gr.Button("Keep it", variant="secondary", size="sm")
@@ -945,7 +986,7 @@ def build_app(settings: Settings) -> gr.Blocks:
         h_status.input(load_history, [h_q, h_status], [h_note, h_table, hist_ids])
 
         # ---------------- report page: evidence chain
-        def chain_for(key):
+        def chain_for(key, wide=False):
             if not key:
                 return gr.skip()
             run_id, eid = key.split("/", 1)
@@ -954,7 +995,8 @@ def build_app(settings: Settings) -> gr.Blocks:
                 return c.notice("Evidence not found.", "muted")
             item = rows[0]
             return c.evidence_chain(item, d.quote_in_page(store, run_id, {"quote": item["quote"],
-                                                                          "source_id": item["source_id"]}))
+                                                                          "source_id": item["source_id"]}),
+                                    wide=wide)
 
         rep_ev.select(pick_row, rep_ev_keys, mem_sel).then(chain_for, mem_sel, rep_chain, show_progress="hidden")
 
@@ -964,7 +1006,7 @@ def build_app(settings: Settings) -> gr.Blocks:
             comp.input(load_evidence, ev_inputs, [e_note, e_table, ev_keys], show_progress="hidden")
         e_q.submit(load_evidence, ev_inputs, [e_note, e_table, ev_keys])
         e_q.input(load_evidence, ev_inputs, [e_note, e_table, ev_keys], show_progress="hidden")
-        e_table.select(pick_row, ev_keys, mem_sel).then(chain_for, mem_sel, e_detail, show_progress="hidden")
+        e_table.select(pick_row, ev_keys, mem_sel).then(lambda k: chain_for(k, wide=True), mem_sel, e_detail, show_progress="hidden")
 
         # ---------------- new research
         def scenario_change(name):
@@ -1001,6 +1043,14 @@ def build_app(settings: Settings) -> gr.Blocks:
                 return (None, c.notice(str(exc), "bad"), gr.update(visible=False), gr.Timer(active=False))
             return (job.id, "", gr.update(visible=True), gr.Timer(active=True))
 
+        # an error about the question disappears as soon as the user edits it
+        nr_q.input(lambda _: "", nr_q, nr_error, show_progress="hidden")
+
+        def start_from_overview(question, scenario, conv, live):
+            if not (question or "").strip():  # the empty box on Overview just opens the form, without an error
+                return (None, "", gr.update(visible=False), gr.Timer(active=False))
+            return start(question, scenario, conv, live)
+
         WS_OUT = [ws_head, ws_rail, ws_workers, ws_feed, ws_outcome, ws_open, timer]
         nr_start.click(start, [nr_q, nr_scenario, nr_conv, nr_live], [job_state, nr_error, ws, timer]) \
             .then(workspace, job_state, WS_OUT, show_progress="hidden")
@@ -1025,10 +1075,10 @@ def build_app(settings: Settings) -> gr.Blocks:
             return [gr.update(value=q)] + go("new")
 
         ov_start.click(overview_start, ov_q, [nr_q] + GO_OUT, show_progress="hidden") \
-            .then(start, [nr_q, nr_scenario, nr_conv, nr_live], [job_state, nr_error, ws, timer]) \
+            .then(start_from_overview, [nr_q, nr_scenario, nr_conv, nr_live], [job_state, nr_error, ws, timer]) \
             .then(workspace, job_state, WS_OUT, show_progress="hidden")
         ov_q.submit(overview_start, ov_q, [nr_q] + GO_OUT, show_progress="hidden") \
-            .then(start, [nr_q, nr_scenario, nr_conv, nr_live], [job_state, nr_error, ws, timer]) \
+            .then(start_from_overview, [nr_q, nr_scenario, nr_conv, nr_live], [job_state, nr_error, ws, timer]) \
             .then(workspace, job_state, WS_OUT, show_progress="hidden")
         for b, q in zip(ex_btns, EXAMPLES):
             b.click(lambda q=q: [gr.update(value=q)] + go("new"), None, [nr_q] + GO_OUT, show_progress="hidden")
@@ -1050,13 +1100,16 @@ def build_app(settings: Settings) -> gr.Blocks:
         rep_trace_btn.click(lambda rid: go("traces", run_for_trace=rid), cur_run, GO_OUT, show_progress="hidden")
 
         # ---------------- review queue
-        rq_pick.input(review_detail, rq_pick, [rq_detail, rq_actions, rq_resume_box], show_progress="hidden")
+        rq_pick.input(review_detail, rq_pick, [rq_detail, rq_actions, rq_resume_box], show_progress="hidden") \
+            .then(lambda: "", None, rq_result, show_progress="hidden")  # an old outcome must not sit above another run
 
         def decide(run_id, note, decision):
             if not run_id:
                 return None, c.notice("Pick a run first.", "bad"), gr.Timer(active=False)
             if jobs.active():
-                return None, c.notice("A run is in progress. Decide when it finishes.", "bad"), gr.Timer(active=False)
+                return None, c.notice("Not applied: a research run is still in progress. Your decision and note are "
+                                      "kept on screen; press the button again when the run finishes.", "bad"), \
+                    gr.Timer(active=False)
             try:
                 decide_review(store, run_id, decision, note or "")
             except ReviewError as exc:
@@ -1079,13 +1132,24 @@ def build_app(settings: Settings) -> gr.Blocks:
                 return "", gr.Timer(active=False)
             names = [ev for _, ev, _ in job.events]
             running = job.status == "running"
-            body = c.rail(c.stage_states(names, running, "resume"), legend=False) + c.feed(job.events, job.started)
+            steps = c.rail(c.stage_states(names, running, "resume"), legend=False) + c.feed(job.events, job.started)
+            if running:
+                return steps, gr.Timer(active=True)
+            # Finished: say WHICH run was decided, so the next run shown below is not mistaken for it.
+            det = d.run_detail(store, job.run_id)
+            title = ((det.report or {}).get("title") if det else None) or job.question
+            left = len(store.pending_reviews())
+            nxt = (f"{left} run{'s' if left != 1 else ''} still awaiting a decision — the next one is shown below."
+                   if left else "The queue is now empty.")
             if job.status == "done":
                 label, tone = d.status_meta(job.outcome or "")
-                body = c.notice(f"Result from the backend: {label}.", tone) + body
-            elif job.status == "error":
-                body = c.notice(job.error or "", "bad", "Resume failed.") + body
-            return body, gr.Timer(active=running)
+                head = c.notice_html(f'<strong>{c.e(label)}:</strong> “{c.e(c.clip(title, 90))}” '
+                                     f'{c.mono(job.run_id)}. {c.e(nxt)}', tone)
+            else:
+                head = c.notice(f"{job.error or ''} {nxt}", "bad", f"Applying the decision on {job.run_id} failed.")
+            body = (f'<div class="rp-rq-done">{head}<details class="rp-details"><summary>What happened after the '
+                    f'decision</summary>{steps}</details></div>')
+            return body, gr.Timer(active=False)
 
         rq_job = gr.State(None)
         def rq_tick_and_refresh(job_id):
@@ -1102,7 +1166,7 @@ def build_app(settings: Settings) -> gr.Blocks:
             btn.click(lambda rid, note, dec=decision: decide(rid, note, dec), [rq_pick, rq_note],
                       [rq_job, rq_result, rq_timer]).then(lambda: time.sleep(0.8)) \
                 .then(rq_tick_and_refresh, rq_job, RQ_OUT, show_progress="hidden") \
-                .then(lambda: "", None, rq_note)
+                .then(lambda job_id: "" if job_id else gr.skip(), rq_job, rq_note)
         rq_resume.click(resume, rq_pick, [rq_job, rq_result, rq_timer]).then(lambda: time.sleep(0.8)) \
             .then(rq_tick_and_refresh, rq_job, RQ_OUT, show_progress="hidden")
 
@@ -1121,8 +1185,15 @@ def build_app(settings: Settings) -> gr.Blocks:
         m_no.click(lambda: (gr.update(visible=True), gr.update(visible=False)), None, [m_delete, m_confirm])
 
         def mem_delete(mid, status, ctype, q):
-            ok = d.delete_memory(store, mid) if mid else False
-            msg = (c.notice(f"Deleted {mid}. It is tombstoned and will not come back from old runs.", "ok") if ok
+            try:
+                ok = d.delete_memory(store, mid) if mid else False
+            except sqlite3.OperationalError:
+                # a running research job is writing to the same database; nothing was deleted
+                return [c.notice("Not deleted: the database is busy because a research run is saving its results. "
+                                 "Try again in a few seconds.", "bad"),
+                        gr.update(visible=False), gr.update(visible=True)] + [gr.skip()] * 7
+            msg = (c.notice(f"Deleted {mid}. Old runs cannot bring it back; new research may still find the "
+                            f"same quote.", "ok") if ok
                    else c.notice("Nothing deleted: the item no longer exists.", "muted"))
             return [msg, gr.update(visible=False), gr.update(visible=False),
                     c.empty("Select an item")] + list(load_memory(status, ctype, q))
@@ -1194,20 +1265,38 @@ def _reliability_html(rel: dict) -> str:
     if not rel:
         return ""
     s = rel.get("search") or {}
-    rows = [("Workers", ", ".join(f"{w['specialist']} {w['status']}" for w in rel.get("workers", [])) or "—")]
+    from ..workflows.reliability import degraded, explain_worker_error, search_notice
+    rows = [("Workers", ", ".join(f"{w['specialist']} {w['status']}" + (f" (after {w['attempts']} tries)"
+                                                                         if w.get("attempts", 1) > 1 else "")
+                                  for w in rel.get("workers", [])) or "—")]
+    for w in rel.get("workers", []):
+        if w.get("status") != "success" and w.get("error"):
+            rows.append((f"Why {w['specialist']} {w['status']}", f"{explain_worker_error(w['error'])} — {w['error']}"))
     if s.get("calls"):
-        rows.append(("Searches", f"{s['calls']} ({', '.join(f'{k} {v}' for k, v in s.get('by_provider', {}).items())})"))
+        mode = "live web" if s.get("live", True) else "offline corpus only (live search off)"
+        rows.append(("Searches", f"{s['calls']} ({', '.join(f'{k} {v}' for k, v in s.get('by_provider', {}).items())})"
+                                 f" · {mode}"))
         rows.append(("Answered by a fallback", str(s.get("fallback_calls", 0))))
         rows.append(("Failed on every provider", str(s.get("failed_calls", 0))))
         if s.get("unavailable"):
             rows.append(("Failed at least once", ", ".join(s["unavailable"])))
+    f = rel.get("fetch") or {}
+    if f.get("calls"):
+        rows.append(("Pages read", f"{f['calls'] - f['failed']} of {f['calls']} ({f['failed']} failed)"))
     rows.append(("Model fallbacks", str(len(rel.get("llm_fallbacks") or []))))
     rows.append(("Embedding failures", str(len(rel.get("embedding_failures") or []))))
     if rel.get("demo_fault"):
         rows.append(("Demo fault", rel["demo_fault"]))
-    from ..workflows.reliability import degraded
     tone = c.badge("Degraded", "warn") if degraded(rel) else c.badge("No degradation", "ok")
-    return c.section("Reliability", c.kv(rows), tone)
+    notice = search_notice(rel)
+    body = (c.notice(notice, "warn") if notice else "") + c.kv(rows)
+    reasons = f.get("reasons") or []
+    if reasons:
+        items = "".join(f"<li><b>{c.e(r.get('specialist') or '—')}</b> {c.e(r['reason'])}</li>" for r in reasons[:20])
+        body += (f'<details class="rp-errlist"><summary>Why page fetches failed ({len(reasons)})</summary>'
+                 f'<ul>{items}</ul><p class="rp-caption">Recorded by the app when the tool failed. The SDK trace '
+                 f'below only says "Error details are redacted".</p></details>')
+    return c.section("Reliability", body, tone)
 
 
 def _tool_safety_html(settings: Settings) -> str:

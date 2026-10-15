@@ -83,11 +83,17 @@ def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
 
 
+BUSY_TIMEOUT_SECONDS = 30
+
+
 class Store:
     def __init__(self, path: str | Path = ":memory:"):
         self.path = str(path)
         self._lock = threading.Lock()
-        self._conn = sqlite3.connect(self.path, check_same_thread=False)
+        # The UI and a running research job each hold their own connection to the same file. A writer
+        # waits up to BUSY_TIMEOUT for the other one instead of failing at once with "database is locked".
+        self._conn = sqlite3.connect(self.path, check_same_thread=False, timeout=BUSY_TIMEOUT_SECONDS)
+        self._conn.execute(f"PRAGMA busy_timeout={int(BUSY_TIMEOUT_SECONDS * 1000)}")
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(SCHEMA)
 
@@ -99,6 +105,17 @@ class Store:
             cur = self._conn.execute(sql, params)
             self._conn.commit()
             return cur
+
+    def _exec_many(self, statements: list[tuple[str, tuple[Any, ...]]]) -> None:
+        """Several statements in one transaction: all of them, or none (rolled back on error)."""
+        with self._lock:
+            try:
+                for sql, params in statements:
+                    self._conn.execute(sql, params)
+                self._conn.commit()
+            except Exception:
+                self._conn.rollback()
+                raise
 
     def _query(self, sql: str, params: tuple[Any, ...] = ()) -> list[sqlite3.Row]:
         with self._lock:

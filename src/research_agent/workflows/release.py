@@ -45,6 +45,14 @@ def impact_gate(ctx: AppContext, report: ResearchReport, confidence: dict) -> li
     reasons = list(ctx.review_reasons)  # sensitive route, Critic FAIL, guard unavailable (flagged earlier)
     if report.impact == "high":
         reasons.append("high-impact recommendation (hard to reverse)")
+    needed = ctx.settings.min_independent_sources
+    if confidence.get("independent_sources", needed) < needed:
+        reasons.append(f"only {confidence['independent_sources']} independent source(s) behind the cited evidence "
+                       f"(at least {needed} needed to release without review)")
+    from .reliability import fetch_degraded
+    if fetch_degraded(ctx.reliability):
+        f = ctx.reliability["fetch"]
+        reasons.append(f"{f['failed']} of {f['calls']} page fetches failed during research")
     threshold = ctx.settings.review_confidence_threshold
     if confidence["score"] < threshold:
         reasons.append(f"confidence {confidence['score']} is below {threshold}")

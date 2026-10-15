@@ -34,6 +34,7 @@ from ..models import (
     normalize_evidence_id,
 )
 from ..tools.evidence import check_citation, retrieve_evidence
+from .quality import normalize_quote
 
 MAX_ROUNDS_CAP = 5           # hard ceiling, whatever MAX_CRITIC_ROUNDS says
 RETRIEVED_PER_FINDING = 3    # "other relevant evidence" shown to the Critic per finding
@@ -171,9 +172,14 @@ def apply_strength_rules(ctx: AppContext, report: ResearchReport, support: dict[
             findings.append(f)
             continue
         sources = {}
+        quotes: set[str] = set()
         for eid in f.evidence_ids:
             ev = ctx.store.get_evidence(ctx.run_id, eid)
             src = ctx.store.get_source(ctx.run_id, ev.source_id) if ev else None
+            if ev and normalize_quote(ev.quote) in quotes:
+                continue  # the same sentence cited twice (e.g. fresh + from memory) is one piece of evidence
+            if ev:
+                quotes.add(normalize_quote(ev.quote))
             if src:
                 sources[str(src.url).rstrip("/")] = src.quality_score  # distinct pages, not source rows
         qualities = list(sources.values())

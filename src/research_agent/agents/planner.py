@@ -27,6 +27,11 @@ For each subquestion:
 - search_queries: 1-3 short web search queries (3-8 words, no quotes or operators)
 
 Rules:
+- Every dimension the question names (e.g. cost, quality, latency, scalability, privacy, lock-in,
+  operational complexity, time to launch) must appear in at least one subquestion's question or
+  success_criteria. Group related dimensions in one subquestion if there are more than six.
+- When the question compares options (A or B), subquestions must gather evidence on each option,
+  not only one of them.
 - Cover only the types the question actually needs. A narrow question (e.g. only about
   security risks) may need only one type.
 - Keep any constraint from the question (team size, budget, industry, data type) inside the

@@ -86,7 +86,10 @@ class Settings:
     # Pipeline limits (code-orchestrated, not configurable by the LLM)
     max_critic_rounds: int = 3
     worker_timeout_seconds: int = 480
+    worker_retries: int = 1  # a worker that failed fast (exception, no evidence) runs once more
     review_confidence_threshold: float = 0.6
+    min_independent_sources: int = 2  # fewer distinct cited sources → human review (corroboration gate)
+    min_coverage_for_verdict: float = 0.5  # below this share of covered subquestions: no recommendation
     sensitive_domains: tuple[str, ...] = field(
         default=("financial", "medical", "legal")
     )
@@ -203,6 +206,8 @@ def load_settings() -> Settings:
         llm_max_retries=_int("LLM_MAX_RETRIES", 4, minimum=0),
         llm_timeout_seconds=_int("LLM_TIMEOUT_SECONDS", 120),
         worker_timeout_seconds=_int("WORKER_TIMEOUT_SECONDS", 480, minimum=30),
+        worker_retries=_int("WORKER_RETRIES", 1, minimum=0),
+        min_independent_sources=_int("MIN_INDEPENDENT_SOURCES", 2, minimum=1),
         llm_reasoning_effort=_choice(
             "LLM_REASONING_EFFORT", "low", ("off", "none", "minimal", "low", "medium", "high")
         ),

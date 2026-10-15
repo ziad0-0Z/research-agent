@@ -65,8 +65,11 @@ def render_markdown(ctx: AppContext) -> str:
     if r.limitations:
         lines += ["", "## Limitations"] + [f"- {x}" for x in r.limitations]
 
-    from ..workflows.reliability import coverage_lines
+    from ..workflows.reliability import coverage_lines, search_notice
     coverage = coverage_lines(ctx.reliability)
+    note = search_notice(ctx.reliability) if coverage else None  # only when research actually came up short
+    if note:
+        coverage.append(note)
     if coverage:  # Phase 7: a degraded run says so in the report itself
         lines += ["", "## Research coverage"] + [f"- {x}" for x in coverage]
 
@@ -80,6 +83,8 @@ def render_markdown(ctx: AppContext) -> str:
         quote = ev.quote.replace("|", "\\|")
         reuse = ctx.memory_reuse.get(eid)
         mem = (f" · reused from memory, last verified {reuse['last_verified_at'][:10]}" if reuse else "")
-        lines.append(f"| {eid} | “{quote}” | [{src.title}]({src.url}) · {src.domain_type} · "
+        where = (f"{src.title} (offline corpus page bundled with the project, not on the live web)"
+                 if src.origin == "offline" else f"[{src.title}]({src.url})")
+        lines.append(f"| {eid} | “{quote}” | {where} · {src.domain_type} · "
                      f"quality {src.quality_score}{mem} |")
     return "\n".join(lines)

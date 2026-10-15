@@ -1,6 +1,6 @@
 """Confidence is computed in Python, never self-reported by the LLM.
 
-score = coverage × source_quality × (1 − contradiction_penalty) × worker_factor
+score = coverage × source_quality × (1 − contradiction_penalty) × worker_factor × corroboration
 
 - coverage: share of planned subquestions answered by at least one cited,
   usable piece of evidence (support not "not_supported")
@@ -8,11 +8,19 @@ score = coverage × source_quality × (1 − contradiction_penalty) × worker_fa
 - contradiction_penalty: 0.1 per contradiction (max 0.3), halved when the
   report acknowledges contradictions
 - worker_factor: −0.15 per failed or timed-out worker
+- corroboration: 1.0 when the cited evidence comes from at least MIN_INDEPENDENT_SOURCES distinct sites,
+  else 0.75 — one site can be right, but nothing checked it (a repeated quote counts once)
+
+What the number means: how well this report is backed by the evidence it cites. It is NOT the probability
+that the recommendation is correct; it is not calibrated against outcomes.
 """
 from __future__ import annotations
 
 from ..context import AppContext
 from ..models import ResearchPlan, ResearchReport, WorkerFindings
+from .quality import corroborated_findings, independent_sources
+
+SINGLE_SITE_FACTOR = 0.75
 
 
 def compute_confidence(ctx: AppContext, plan: ResearchPlan, report: ResearchReport,
@@ -46,7 +54,12 @@ def compute_confidence(ctx: AppContext, plan: ResearchPlan, report: ResearchRepo
     bad_workers = sum(1 for w in workers if w.status in ("failed", "timeout"))
     worker_factor = max(0.0, 1 - 0.15 * bad_workers)
 
-    score = coverage * quality * (1 - penalty) * worker_factor
+    sites = independent_sources(ctx, cited)
+    needed = ctx.settings.min_independent_sources
+    corroboration = 1.0 if len(sites) >= needed else SINGLE_SITE_FACTOR
+    corroborated = corroborated_findings(ctx, report, needed)
+
+    score = coverage * quality * (1 - penalty) * worker_factor * corroboration
     return {
         "score": round(score, 2),
         "coverage": round(coverage, 2),
@@ -54,10 +67,15 @@ def compute_confidence(ctx: AppContext, plan: ResearchPlan, report: ResearchRepo
         "source_quality": round(quality, 2),
         "contradiction_penalty": round(penalty, 2),
         "worker_factor": round(worker_factor, 2),
+        "independent_sources": len(sites),
+        "corroboration": corroboration,
+        "corroborated_findings": f"{corroborated}/{len(report.findings)}",
         "explanation": (
             f"{covered}/{total_sq} subquestions covered by usable cited evidence; "
             f"mean source quality {quality:.2f}; {n_contra} contradiction(s)"
             f"{' (acknowledged)' if n_contra and report.contradictions else ''}; "
-            f"{bad_workers} failed/timed-out worker(s)."
+            f"{bad_workers} failed/timed-out worker(s); {len(sites)} independent site(s)"
+            f"{'' if corroboration == 1.0 else f' (below {needed}: ×{SINGLE_SITE_FACTOR})'}; "
+            f"{corroborated}/{len(report.findings)} findings backed by {needed}+ sites."
         ),
     }

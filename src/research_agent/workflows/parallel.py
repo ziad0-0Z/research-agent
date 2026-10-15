@@ -36,19 +36,39 @@ def _evidence_for(ctx: AppContext, subquestion_ids: list[str]) -> dict[str, list
     return found
 
 
-async def _run_one(ctx: AppContext, task: WorkerTask, timeout: float) -> WorkerFindings:
-    CURRENT_SPECIALIST.set(task.specialist)  # this coroutine runs in its own task: the value stays local
+def _last_failed_tool(ctx: AppContext, specialist: str, since: float) -> str | None:
+    for r in reversed(ctx.tool_log):
+        if r.specialist == specialist and r.at >= since and not r.ok:
+            return f"last failed tool: {r.tool} ({r.summary[:120]})"
+    return None
+
+
+async def _attempt(ctx: AppContext, task: WorkerTask, timeout: float
+                   ) -> tuple[ResearcherOutput | None, str | None, bool]:
     started = time.time()
-    output: ResearcherOutput | None = None
-    error: str | None = None
-    timed_out = False
     try:
-        output = await asyncio.wait_for(task.run(), timeout=timeout)
+        return await asyncio.wait_for(task.run(), timeout=timeout), None, False
     except asyncio.TimeoutError:
-        timed_out = True
-        error = f"timed out after {timeout:.0f}s"
+        return None, f"timed out after {timeout:.0f}s", True
     except Exception as exc:  # noqa: BLE001 - isolate any worker failure
         error = f"{type(exc).__name__}: {str(exc)[:200]}"
+        hint = _last_failed_tool(ctx, task.specialist, started)
+        return None, f"{error}; {hint}" if hint else error, False
+
+
+async def _run_one(ctx: AppContext, task: WorkerTask, timeout: float, retries: int = 0) -> WorkerFindings:
+    CURRENT_SPECIALIST.set(task.specialist)  # this coroutine runs in its own task: the value stays local
+    started = time.time()
+    output, error, timed_out = await _attempt(ctx, task, timeout)
+    attempts = 1
+    # A worker that crashed fast without saving anything gets one more try (a transient schema or provider
+    # error is common on free tiers). A timeout is not retried: it would only double the wait.
+    while (error and not timed_out and attempts <= retries
+           and not any(_evidence_for(ctx, task.subquestion_ids).values())):
+        ctx.log_stage("worker_retry", specialist=task.specialist, error=error[:200], attempt=attempts + 1)
+        remaining = max(30.0, timeout - (time.time() - started))
+        output, error, timed_out = await _attempt(ctx, task, remaining)
+        attempts += 1
     finished = time.time()
 
     per_sq = _evidence_for(ctx, task.subquestion_ids)
@@ -78,15 +98,16 @@ async def _run_one(ctx: AppContext, task: WorkerTask, timeout: float) -> WorkerF
     findings = WorkerFindings(
         specialist=task.specialist, status=status, subquestion_ids=task.subquestion_ids,
         evidence_ids=evidence_ids, summaries=summaries, error=error,
-        started_at=started, finished_at=finished,
+        started_at=started, finished_at=finished, attempts=attempts,
     )
     ctx.log_stage("worker_done", specialist=task.specialist, status=status,
                   evidence=len(evidence_ids), seconds=findings.duration)
     return findings
 
 
-async def run_parallel(ctx: AppContext, tasks: list[WorkerTask], timeout: float) -> list[WorkerFindings]:
-    return list(await asyncio.gather(*(_run_one(ctx, t, timeout) for t in tasks)))
+async def run_parallel(ctx: AppContext, tasks: list[WorkerTask], timeout: float,
+                       retries: int = 0) -> list[WorkerFindings]:
+    return list(await asyncio.gather(*(_run_one(ctx, t, timeout, retries) for t in tasks)))
 
 
 def timeline(workers: list[WorkerFindings]) -> dict:

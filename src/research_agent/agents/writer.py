@@ -25,7 +25,9 @@ Write:
 - limitations: gaps, failed or partial research, weak-only evidence, and anything the evidence
   does not cover. Be honest; this is where uncertainty goes.
 - recommendation: concrete and conditional (e.g. "do X now; revisit when Y"). It must follow from
-  the findings.
+  the findings and weigh every option the question names. If the coverage note says the policy
+  applies, or the evidence does not let you compare the options, start with
+  "Insufficient evidence to choose" and list the missing data instead of picking an option.
 - impact: low, medium or high, for how consequential and hard to reverse the decision is.
 
 Rules:
@@ -33,6 +35,8 @@ Rules:
 - Cite only evidence ids from the "Valid evidence ids" list, written exactly like ev7
   (no prefixes such as "id:", no brackets, no quotes). Never invent ids.
 - Never state a claim more strongly than its quote supports; keep conditions (team size, volume).
+  A quote about one case is not a rule: do not turn "in our sample" into "always" or "every".
+- Evidence that repeats the same sentence counts as one source, not several.
 - You only read sources. Never say the report was reviewed or approved by anyone, and never claim
   that you tested, benchmarked, measured or deployed anything. Do not add URLs.
 - Prefer high-quality sources; when a low-quality source disagrees with a high-quality one, say so.

@@ -42,6 +42,7 @@ from ..tools.evidence import check_citation
 from ..tools.review import render_markdown
 from ..tools.web import ToolError
 from .confidence import compute_confidence
+from .quality import coverage as compute_coverage, coverage_prompt_block, enforce_recommendation_policy, plan_gaps
 from ..memory import MemoryStore, lower_depth, related_reports, reuse_for_plan
 from ..memory.lookup import MemoryUse
 from .eval_loop import LoopResult, writer_critic_loop
@@ -213,6 +214,9 @@ async def run_research(question: str, *, settings: Settings | None = None, store
             except Exception as exc:
                 raise PipelineError("planner", f"{type(exc).__name__}: {exc}") from exc
             _emit(ctx, on_event, "planned", subquestions=[sq.model_dump() for sq in plan.subquestions])
+            unplanned = plan_gaps(plan)  # dimensions the question names that no subquestion asks about
+            if unplanned:
+                _emit(ctx, on_event, "plan_gaps", dimensions=unplanned)
 
             # 3. LLM-ORCHESTRATED delegation, validated by code
             try:
@@ -253,7 +257,8 @@ async def run_research(question: str, *, settings: Settings | None = None, store
                 tasks.append(WorkerTask(kind, [sq.id for sq in sqs], make_run))
             _emit(ctx, on_event, "research_started", workers=[t.specialist for t in tasks])
             with custom_span("Parallel research", data={"workers": [t.specialist for t in tasks]}):
-                workers = await run_parallel(ctx, tasks, timeout=settings.worker_timeout_seconds)
+                workers = await run_parallel(ctx, tasks, timeout=settings.worker_timeout_seconds,
+                                             retries=settings.worker_retries)
             tl = timeline(workers)
             ctx.reliability = build_reliability(ctx, workers, rel_start)
             _emit(ctx, on_event, "research_done", workers=[w.model_dump() for w in workers], timeline=tl,
@@ -273,8 +278,11 @@ async def run_research(question: str, *, settings: Settings | None = None, store
             _emit(ctx, on_event, "analysed", agreements=len(analysis.agreements),
                   contradictions=len(analysis.contradictions), gaps=analysis.gaps)
 
-            # 6. Writer (chain step 3)
-            writer_prompt = _writer_prompt(ctx, plan, analysis, workers)
+            # 6. Writer (chain step 3). Coverage is computed in code and the policy is stated up front.
+            cov = compute_coverage(ctx, plan, unplanned)
+            _emit(ctx, on_event, "coverage", **cov.summary())
+            writer_prompt = _writer_prompt(ctx, plan, analysis, workers) + "\n\n" + coverage_prompt_block(
+                cov, settings.min_coverage_for_verdict)
             try:
                 report: ResearchReport = await run_agent(_writer(), writer_prompt, ctx, 2)
             except Exception as exc:
@@ -294,6 +302,11 @@ async def run_research(question: str, *, settings: Settings | None = None, store
                     writer_agent=_writer, critic_agent=_critic, max_rounds=settings.max_critic_rounds,
                     on_event=lambda stage, data: _emit(ctx, on_event, stage, **data))
             report = loop.report
+            # Recommendation policy (code): too little coverage → no verdict, whatever the Writer wrote.
+            cov = compute_coverage(ctx, plan, unplanned)
+            report, withheld = enforce_recommendation_policy(report, cov, settings.min_coverage_for_verdict)
+            if withheld:
+                _emit(ctx, on_event, "recommendation_withheld", coverage=cov.summary())
             if loop.verdict == "FAIL":
                 ctx.flag_review(f"Critic FAIL after {len(loop.rounds)} round(s) ({loop.stop_reason})")
             _emit(ctx, on_event, "critic_done", verdict=loop.verdict, rounds=len(loop.rounds),
@@ -314,7 +327,8 @@ async def run_research(question: str, *, settings: Settings | None = None, store
 
             # 8. Release: output guardrail → token → impact gate → review queue or final report (all code)
             save_run_state(ctx, plan=plan, analysis=analysis, workers=workers, confidence=confidence,
-                           extra={"critic_verdict": loop.verdict, "critic_rounds": len(loop.rounds),
+                           extra={"coverage": cov.summary(), "recommendation_withheld": withheld,
+                                  "critic_verdict": loop.verdict, "critic_rounds": len(loop.rounds),
                                   "critic_stop_reason": loop.stop_reason, "route": route.path,
                                   "memory_lookup": memory_use.summary(), "worker_depths": depths})
             release = release_report(ctx, workers, confidence, plan=plan,

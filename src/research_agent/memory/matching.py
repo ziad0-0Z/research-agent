@@ -83,6 +83,33 @@ def passes_gate(query: str, item: MemoryItem, min_match: float, index: TermIndex
     return (m >= min_match and hits >= MIN_MATCHED_TERMS), m
 
 
+# Decision facets every question shares ("compare cost, privacy and lock-in"). They say WHICH aspect is
+# asked about, not WHAT the decision is about, so they can't make a remembered item relevant on their own:
+# bank-regulation evidence about "customer data privacy" must not enter an e-commerce recommender question.
+FACET_WORDS = {_stem(w) for w in (
+    "cost", "costs", "price", "pricing", "total", "ownership", "tco", "quality", "latency", "performance",
+    "scalability", "scale", "scaling", "security", "privacy", "compliance", "risk", "risks", "vendor", "lock",
+    "lockin", "data", "time", "launch", "implementation", "implement", "build", "buy", "own", "managed",
+    "operational", "complexity", "capabilities", "budget", "limited", "engineering", "resources", "compare",
+    "trade", "offs", "provide", "evidence", "recommendation", "recommendations", "condition", "conditions",
+    "alternative", "preferable", "month", "months", "year", "next", "growth", "grow", "volume", "startup",
+    "should", "or", "adopt", "dedicated", "explain", "identify", "assume", "expects", "significantly",
+    "its", "such", "require", "required", "requires", "based", "system", "systems", "using", "used", "make",
+    "making", "whether", "option", "options", "versus", "vs", "api", "apis",
+)}
+
+
+def topic_terms(main_question: str) -> set[str]:
+    """What the decision is about: the question's content words minus the generic decision facets."""
+    return {t for t in content_terms(main_question) - FACET_WORDS if len(t) >= 2}
+
+
+def shares_topic(main_question: str, item: MemoryItem) -> bool:
+    """A remembered item must mention at least one topic word of the new question (not only a facet)."""
+    topic = topic_terms(main_question)
+    return not topic or bool(topic & _item_terms(item))
+
+
 @dataclass
 class Assignment:
     subquestion_id: str
@@ -107,6 +134,8 @@ def assign_items(settings: Settings, items: list[MemoryItem], plan: ResearchPlan
     index = TermIndex(items)
     gate: dict[str, dict[str, float]] = {}
     for it in items:
+        if not shares_topic(plan.main_question, it):
+            continue  # matches a facet ("privacy", "cost") of a different decision
         for sq in plan.subquestions:
             ok, m = passes_gate(sq.question, it, settings.memory_min_match, index)
             if ok:

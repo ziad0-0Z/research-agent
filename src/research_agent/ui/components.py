@@ -62,6 +62,20 @@ def notice_html(inner: str, tone: str = "info") -> str:
     return f'<div class="rp-notice rp-{tone}">{inner}</div>'
 
 
+CONFIDENCE_HELP = ("Confidence is computed in code: share of subquestions covered by cited evidence × mean source "
+                   "quality × penalties for contradictions, failed workers and single-site evidence. It measures how "
+                   "well the report is backed by its sources, not the probability that the recommendation is right.")
+
+
+def clip(text: str, n: int) -> str:
+    """Shorten at a word boundary and say so with "…" (never cut a word in half silently)."""
+    text = " ".join(str(text or "").split())
+    if len(text) <= n:
+        return text
+    cut = text[:n].rsplit(" ", 1)[0] if " " in text[:n] else text[:n]
+    return cut.rstrip(",.;:") + "…"
+
+
 def meter(value: float | None, threshold: float | None = None) -> str:
     if value is None:
         return '<span class="rp-meter-none">not computed</span>'
@@ -69,7 +83,7 @@ def meter(value: float | None, threshold: float | None = None) -> str:
     tone = "ok" if value >= 0.7 else "warn" if value >= (threshold or 0.6) else "bad"
     mark = (f'<span class="rp-meter-mark" style="left:{threshold * 100:.0f}%" title="review threshold {threshold}"></span>'
             if threshold is not None else "")
-    return (f'<span class="rp-meter rp-{tone}"><span class="rp-meter-track"><span class="rp-meter-fill" '
+    return (f'<span class="rp-meter rp-{tone}" title="{e(CONFIDENCE_HELP)}"><span class="rp-meter-track"><span class="rp-meter-fill" '
             f'style="width:{pct:.0f}%"></span>{mark}</span><b>{value:.2f}</b></span>')
 
 
@@ -209,6 +223,15 @@ def event_line(stage: str, data: dict) -> tuple[str, str] | None:
         return (f"Memory: {d.get('reused')} remembered evidence item(s) re-verified into this run", "")
     if stage == "planned":
         return (f"Planner: {len(d.get('subquestions', []))} subquestions", "")
+    if stage == "plan_gaps":
+        return (f"Planner check: no subquestion covers {', '.join(d.get('dimensions', []))} "
+                "(will be listed as a limitation)", "warn")
+    if stage == "coverage":
+        missing = d.get("missing") or []
+        return (f"Coverage: {len(d.get('covered') or [])} of {len(d.get('covered') or []) + len(missing)} subquestions "
+                f"have evidence" + (f"; missing {', '.join(missing)}" if missing else ""), "warn" if missing else "ok")
+    if stage == "recommendation_withheld":
+        return ("Recommendation withheld: too little coverage to choose an option", "warn")
     if stage == "delegated":
         a = d.get("assignments", {})
         return (f"Orchestrator: {', '.join(f'{k} ({len(v)})' for k, v in a.items())} at {d.get('depth')} depth", "")
@@ -217,8 +240,14 @@ def event_line(stage: str, data: dict) -> tuple[str, str] | None:
     if stage == "research_done":
         ws = d.get("workers", [])
         bad = [w["specialist"] for w in ws if w["status"] != "success"]
-        s = (d.get("reliability") or {}).get("search") or {}
+        rel = d.get("reliability") or {}
+        s = rel.get("search") or {}
         extra = f"; {s['fallback_calls']} searches used a fallback provider" if s.get("fallback_calls") else ""
+        f = rel.get("fetch") or {}
+        if f.get("failed"):
+            extra += f"; {f['failed']} of {f['calls']} page fetches failed"
+        if s.get("offline_only"):
+            extra += "; every search used the offline corpus"
         return (f"Research finished: {sum(len(w.get('evidence_ids', [])) for w in ws)} verified evidence items"
                 + (f"; degraded: {', '.join(bad)}" if bad else "") + extra, "warn" if bad or extra else "ok")
     if stage == "analysed":
@@ -244,7 +273,7 @@ def event_line(stage: str, data: dict) -> tuple[str, str] | None:
                 "ok" if d.get("passed") else "bad")
     if stage == "gate":
         if d.get("needs_review"):
-            return ("Impact gate: human review required — " + "; ".join(d.get("reasons", []))[:220], "warn")
+            return ("Impact gate: human review required — " + clip("; ".join(d.get("reasons", [])), 220), "warn")
         return ("Impact gate: " + ("approved by a human" if d.get("approved") else "no review needed"), "ok")
     if stage == "paused":
         return ("Paused for human review — the report is held until someone decides", "warn")
@@ -291,7 +320,11 @@ def worker_cards(workers: list[dict], running_names: list[str] | None = None) ->
                 # parallel.py judges success by saved evidence: the turn limit hit after that is only a note
                 note = '<p class="rp-worker-note rp-note-quiet">Stopped at its turn limit after covering every subquestion.</p>'
             else:
-                note = f'<p class="rp-worker-note">{e(err[:140])}</p>'
+                from ..workflows.reliability import explain_worker_error
+                note = (f'<p class="rp-worker-note"><b>{e(explain_worker_error(err).capitalize())}.</b> '
+                        f'<span title="{e(err)}">{e(err[:140])}{"…" if len(err) > 140 else ""}</span></p>')
+        if w.get("attempts", 1) > 1:
+            note += f'<p class="rp-worker-note rp-note-quiet">Retried: {w["attempts"]} attempts.</p>'
 
         cards.append(f'<div class="rp-worker"><div class="rp-worker-top"><b>{e(w["specialist"].capitalize())}</b>'
                      f'{badge(label, tone)}</div><div class="rp-worker-meta">{len(w.get("evidence_ids", []))} evidence · '
@@ -325,13 +358,52 @@ def timeline_bars(tl: dict | None) -> str:
 def _cite_chip(eid: str, ev: dict | None, src: dict | None) -> str:
     if ev is None:
         return f'<span class="rp-cite rp-cite-bad" title="This evidence id does not exist in the run">{e(eid)}</span>'
-    tip = f'“{ev["quote"][:260]}” — {src.get("title", "") if src else ""}'
+    tip = f'“{clip(ev["quote"], 260)}” — {src.get("title", "") if src else ""}'
     mem = " rp-cite-mem" if ev.get("memory") else ""
     return f'<a class="rp-cite{mem}" href="#ev-{e(eid)}" title="{e(tip)}">{e(eid)}</a>'
 
 
+def coverage_state(detail) -> dict | None:
+    """Covered / missing subquestions: stored by newer runs, else rebuilt from the plan and the saved evidence."""
+    cov = detail.state.get("coverage")
+    if cov:
+        return cov
+    plan = detail.state.get("plan") or {}
+    sqs = plan.get("subquestions") or []
+    if not sqs:
+        return None
+    have = {v.get("subquestion_id") for v in detail.evidence.values()
+            if v.get("verified") and v.get("support") != "not_supported"}
+    return {"covered": [q["id"] for q in sqs if q["id"] in have],
+            "missing": [q["id"] for q in sqs if q["id"] not in have],
+            "missing_questions": [q["question"] for q in sqs if q["id"] not in have], "unplanned_dimensions": []}
+
+
+def coverage_banner(detail) -> str:
+    cov = coverage_state(detail)
+    if not cov:
+        return ""
+    plan = {q["id"]: q for q in (detail.state.get("plan") or {}).get("subquestions") or []}
+    total = len(cov["covered"]) + len(cov["missing"])
+
+    def names(ids):
+        return ", ".join(f'{i} ({plan[i]["type"]})' if i in plan else i for i in ids)
+
+    parts = [f"<b>Coverage: {len(cov['covered'])} of {total} subquestions have evidence.</b>"]
+    if cov["covered"]:
+        parts.append(f"Covered: {e(names(cov['covered']))}.")
+    if cov["missing"]:
+        parts.append(f"Missing: {e(names(cov['missing']))}.")
+    if cov.get("unplanned_dimensions"):
+        parts.append(f"Not researched at all: {e(', '.join(cov['unplanned_dimensions']))}.")
+    tone = "ok" if not cov["missing"] and not cov.get("unplanned_dimensions") else (
+        "bad" if len(cov["covered"]) * 2 < total else "warn")
+    return f'<div class="rp-notice rp-{tone} rp-coverage">{" ".join(parts)}</div>'
+
+
 def report_body(detail, compact: bool = False) -> str:
-    """The reading view: built from the stored report JSON, evidence and sources of the run."""
+    """The reading view: the decision first (summary, recommendation, coverage), then the reasons, then the sources.
+    Built from the stored report JSON, evidence and sources of the run."""
     r = detail.report
     if not r:
         return empty("No report for this run", _no_report_reason(detail))
@@ -340,6 +412,10 @@ def report_body(detail, compact: bool = False) -> str:
     if not compact:  # compact views already show the title in their own header
         parts.append(f'<h2 class="rp-report-title">{e(r["title"])}</h2>')
     parts.append(f'<p class="rp-lede">{e(r["executive_summary"])}</p>')
+    withheld = r["recommendation"].startswith("Insufficient evidence to choose")
+    parts.append(f'<div class="rp-reco{" rp-reco-withheld" if withheld else ""}"><h3>Recommendation</h3>'
+                 f'<p>{e(r["recommendation"])}</p><span>Impact if acted on: <b>{e(r["impact"])}</b></span></div>')
+    parts.append(coverage_banner(detail))
     parts.append('<h3>Findings</h3><ol class="rp-findings">')
     for f in r["findings"]:
         sl, st = STRENGTH.get(f["strength"], (f["strength"], "muted"))
@@ -351,19 +427,20 @@ def report_body(detail, compact: bool = False) -> str:
     if r.get("contradictions"):
         parts.append('<h3>Where sources disagree</h3><ul class="rp-list">' +
                      "".join(f"<li>{e(c)}</li>" for c in r["contradictions"]) + "</ul>")
-    parts.append(f'<div class="rp-reco"><h3>Recommendation</h3><p>{e(r["recommendation"])}</p>'
-                 f'<span>Impact if acted on: <b>{e(r["impact"])}</b></span></div>')
     if r.get("limitations"):
         parts.append('<h3>Limitations and missing information</h3><ul class="rp-list">' +
                      "".join(f"<li>{e(x)}</li>" for x in r["limitations"]) + "</ul>")
     rel = detail.state.get("reliability")
-    from ..workflows.reliability import coverage_lines
+    from ..workflows.reliability import coverage_lines, search_notice
     cov = coverage_lines(rel)
-    if cov:
+    note = search_notice(rel) if cov else None  # the offline-corpus note matters only when research came up short
+    if cov or note:
         parts.append('<h3>Research coverage</h3><ul class="rp-list rp-cov">' +
-                     "".join(f"<li>{e(x.replace('**', ''))}</li>" for x in cov) + "</ul>")
+                     "".join(f"<li>{e(x.replace('**', ''))}</li>" for x in cov + ([note] if note else [])) + "</ul>")
     if not compact:
-        parts.append(appendix(detail, r))
+        n = len({i for f in r["findings"] for i in f["evidence_ids"]})
+        parts.append(f'<details class="rp-appendix-wrap"><summary>Evidence appendix ({n} cited quotes with their '
+                     f'sources)</summary>{appendix(detail, r)}</details>')
     parts.append("</article>")
     return "".join(parts)
 
@@ -440,7 +517,7 @@ def outcome_banner(detail) -> str:
 
 # --------------------------------------------------------------------------- evidence chain (detail panel)
 
-def evidence_chain(item: dict, page: dict | None) -> str:
+def evidence_chain(item: dict, page: dict | None, wide: bool = False) -> str:
     """claim → quote → stored page → source. The quote is re-checked against the page text right now."""
     ctx = ""
     if page and page.get("has_text") and page.get("match"):
@@ -464,6 +541,15 @@ def evidence_chain(item: dict, page: dict | None) -> str:
         flags.append(badge("Injection detected in page", "bad"))
     if item.get("status") and item["status"] != "active":
         flags.append(badge(item["status"].capitalize(), "muted"))
+    if wide:  # full-width detail card (Evidence explorer): the chain on the left, the page it came from on the right
+        left = (f'<div class="rp-chain-step"><span>Claim</span><p>{e(item["claim"])}</p></div>'
+                f'<div class="rp-chain-step"><span>Verbatim quote</span><blockquote>“{e(item["quote"])}”</blockquote></div>'
+                f'<div class="rp-chain-flags">{"".join(flags)}</div>'
+                f'<div class="rp-chain-step"><span>Source</span><p>{source_link(item["url"], item["source_title"], item["origin"] if item["origin"] != "memory" else "")}'
+                f'<span class="rp-host">{e(item["domain_type"])} · quality {item["quality"]}</span></p></div>'
+                f'{kv([("Evidence", item["id"]), ("Run", item["run_id"]), ("Subquestion", item["subquestion_id"]), ("Saved", short_time(item["retrieved_at"]))])}')
+        right = (ctx + memo) or empty("No stored page text", "The page text was not kept for this source.")
+        return f'<div class="rp-chain rp-chain-wide"><div>{left}</div><div>{right}</div></div>'
     return (f'<div class="rp-chain"><div class="rp-chain-step"><span>Claim</span><p>{e(item["claim"])}</p></div>'
             f'<div class="rp-chain-step"><span>Verbatim quote</span><blockquote>“{e(item["quote"])}”</blockquote></div>'
             f'<div class="rp-chain-flags">{"".join(flags)}</div>{ctx}{memo}'
@@ -475,6 +561,24 @@ def evidence_chain(item: dict, page: dict | None) -> str:
 
 # --------------------------------------------------------------------------- run lists
 
+EVIDENCE_HEADERS = ["Claim and quote", "Support", "Origin", "Source", "Evidence", "Run"]
+
+
+def evidence_table_rows(rows) -> list[list[str]]:
+    """Same rhythm as the Research history table: the text first, then one short column per fact."""
+    out = []
+    for r in rows:
+        out.append([
+            f'<div class="rp-cell-q"><b>{e(clip(r["claim"], 170))}</b><span>“{e(clip(r["quote"], 140))}”</span></div>',
+            support_badge(r["support"]),
+            badge(ORIGIN.get(r["origin"], r["origin"]), "info" if r["origin"] == "memory" else "muted"),
+            f'<div class="rp-cell-src"><span>{e(urlhost(r["url"]))}</span><small>quality {r["quality"]:.2f}</small></div>',
+            f'<code class="rp-id">{e(r["id"])}</code>',
+            f'<code class="rp-id">{e(r["run_id"])}</code>',
+        ])
+    return out
+
+
 def run_table_rows(rows) -> list[list[str]]:
     out = []
     for r in rows:
@@ -483,7 +587,7 @@ def run_table_rows(rows) -> list[list[str]]:
         if r.partial:
             flags.append(badge("Partial", "warn"))
         if r.reused:
-            flags.append(badge(f"{r.reused} from memory", "info"))
+            flags.append(badge(f"{r.reused} reused from memory", "info"))
         if r.stale:
             flags.append(badge("Interrupted", "muted"))
         if r.demo_fault:
@@ -534,6 +638,47 @@ def target_chart(items: list[tuple[str, float, float, bool]]) -> str:
             f'<span class="rp-tgt-verdict rp-{tone}">{"meets" if ok else "below"} {"≤" if lower_better else "≥"} {target * 100:.0f}%</span></div>')
     return (f'<section class="rp-section rp-tgt"><header><h3>Measured against targets</h3>'
             f'<span class="rp-section-aside">bar = measured · tick = target</span></header>{"".join(rows)}</section>')
+
+
+METRIC_GROUPS = (
+    ("Grounding", "Every claim traces to a verified quote"),
+    ("Safety", "Attacks stopped, normal questions let through"),
+    ("Routing and retrieval", "The right specialists, the right evidence"),
+    ("Engineering", "Code health"),
+)
+
+
+def metric_table(metrics: list[dict]) -> str:
+    """One calm table instead of a chart plus a wall of cards: group · metric · result (with a thin bar to the
+    target) · target · status · how it was measured. Details stay one line, the source is in the tooltip."""
+    body = []
+    for group, blurb in METRIC_GROUPS:
+        rows = [m for m in metrics if m["group"] == group]
+        if not rows:
+            continue
+        body.append(f'<tr class="rp-mt-group"><th colspan="5">{e(group)}<span>{e(blurb)}</span></th></tr>')
+        for m in rows:
+            if m["value"] is None:
+                status = badge("Not measured", "muted")
+            elif m["ok"] is None:
+                status = badge("Reported", "info")
+            else:
+                status = badge("Meets target", "ok") if m["ok"] else badge("Below target", "bad")
+            bar = ""
+            if m.get("frac") is not None:
+                tone = "ok" if m["ok"] else "bad"
+                tick = f'<i style="left:{m["t"] * 100:.0f}%"></i>' if m.get("t") is not None else ""
+                bar = (f'<span class="rp-mt-bar"><span class="rp-{tone}" style="width:{max(m["frac"], .01) * 100:.0f}%">'
+                       f'</span>{tick}</span>')
+            how = f'<span class="rp-how rp-how-{e(m["how"])}">{e(m["how"])}</span>' if m.get("how") else ""
+            when = f' · {e(short_time(m["when"]))}' if m.get("when") else ""
+            body.append(
+                f'<tr><td class="rp-mt-name"><b>{e(m["name"])}</b><small title="{e(m["source"])}">{e(m["detail"])}</small></td>'
+                f'<td class="rp-mt-val"><b>{e(m["value"]) if m["value"] is not None else "—"}</b>{bar}</td>'
+                f'<td class="rp-mt-target">{e(m["target"])}</td><td>{status}</td>'
+                f'<td class="rp-mt-how">{how}<small>{e(m["source_short"])}{when}</small></td></tr>')
+    return (f'<section class="rp-section rp-mt"><table class="rp-metric-table"><thead><tr><th>Metric</th><th>Result</th>'
+            f'<th>Target</th><th>Status</th><th>Measured</th></tr></thead><tbody>{"".join(body)}</tbody></table></section>')
 
 
 def speedup_bars(rows: list[dict]) -> str:

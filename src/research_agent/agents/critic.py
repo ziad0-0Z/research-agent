@@ -33,11 +33,14 @@ Also return:
 - contradictions_ignored: contradictions from the evidence analysis that the report does not
   address anywhere (empty list if all are addressed).
 - other_issues: serious problems only, e.g. the recommendation does not follow from the findings,
+  the recommendation picks an option without evidence on the other option(s) the question names,
   or the summary states something no finding supports. Empty list if none.
 
 Rules:
 - Judge only against the quotes given. Outside knowledge does not count as support.
 - An opinion or marketing quote ("in my view", "save 99%") does not support a general factual claim.
+- A quote that exists verbatim is not automatically support: if the finding is broader than the
+  quote ("always", "every", "full responsibility" from a quote about one case), mark it partial.
 - Do not invent evidence ids. Review every finding you were given."""
 
 

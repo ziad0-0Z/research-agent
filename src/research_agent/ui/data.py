@@ -226,12 +226,16 @@ def report_markdown(detail: RunDetail) -> str:
     if r.get("limitations"):
         lines += ["", "## Limitations"] + [f"- {x}" for x in r["limitations"]]
     lines += ["", "## Evidence appendix", ""]
+    seen: set[str] = set()
     for f in r["findings"]:
         for eid in f["evidence_ids"]:
             ev = detail.evidence.get(eid)
-            if ev:
+            if ev and eid not in seen:
+                seen.add(eid)
                 src = detail.sources.get(ev["source_id"], {})
-                lines.append(f"- [{eid}] “{ev['quote']}” — {src.get('title', '?')} ({src.get('url', '')})")
+                where = ("offline corpus page bundled with the project, not on the live web"
+                         if src.get("origin") == "offline" else src.get("url", ""))
+                lines.append(f"- [{eid}] “{ev['quote']}” — {src.get('title', '?')} ({where})")
     return "\n".join(lines)
 
 
@@ -330,7 +334,7 @@ def conversations(store: Store, limit: int = 30) -> list[dict]:
             continue
         seen.add(sid)
         title = (state.get("report") or {}).get("title") or row["question"]
-        out.append({"session_id": sid, "run_id": row["id"], "label": title[:90], "status": row["status"],
+        out.append({"session_id": sid, "run_id": row["id"], "label": title if len(title) <= 90 else title[:89].rsplit(" ", 1)[0] + "…", "status": row["status"],
                     "created_at": row["created_at"]})
         if len(out) >= limit:
             break
@@ -393,7 +397,10 @@ def settings_view(settings: Settings) -> list[tuple[str, list[tuple[str, str]]]]
         ("Guardrails & review", [("Review below confidence", str(settings.review_confidence_threshold)),
                                  ("Sensitive domains", ", ".join(settings.sensitive_domains)),
                                  ("Max Critic rounds", str(settings.max_critic_rounds)),
-                                 ("Worker timeout", f"{settings.worker_timeout_seconds} s")]),
+                                 ("Worker timeout", f"{settings.worker_timeout_seconds} s"),
+                                 ("Worker retries", str(settings.worker_retries)),
+                                 ("Independent sites needed", str(settings.min_independent_sources)),
+                                 ("No verdict below coverage", f"{settings.min_coverage_for_verdict:.0%}")]),
         ("Memory", [("Long-term memory", settings.memory_mode),
                     ("Freshness (days)", ", ".join(f"{k} {v}" for k, v in settings.memory_ttl_days)),
                     ("Reuse match threshold", str(settings.memory_min_match))]),

@@ -204,9 +204,11 @@ class MemoryStore:
         item = self.get(mem_id)
         if item is None:
             return False
-        self.store._exec("INSERT OR REPLACE INTO memory_tombstones VALUES (?,?,?)",
-                         (item.content_hash, mem_id, now.isoformat()))
-        self.store._exec("DELETE FROM memory_evidence WHERE mem_id=?", (mem_id,))
+        # one transaction: a busy database can never leave a tombstone without the delete (or the reverse)
+        self.store._exec_many([
+            ("INSERT OR REPLACE INTO memory_tombstones VALUES (?,?,?)", (item.content_hash, mem_id, now.isoformat())),
+            ("DELETE FROM memory_evidence WHERE mem_id=?", (mem_id,)),
+        ])
         return True
 
     def purge(self, mem_id: str) -> None:
